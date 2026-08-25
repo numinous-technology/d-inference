@@ -3945,12 +3945,18 @@ func (r *Registry) disconnect(id string, expected *Provider) bool {
 		if pr.ErrorCh != nil {
 			func() {
 				defer func() { recover() }()
-				pr.ErrorCh <- protocol.InferenceErrorMessage{
+				message := protocol.InferenceErrorMessage{
 					Type:             protocol.TypeInferenceError,
 					RequestID:        reqID,
 					Error:            "provider disconnected",
 					StatusCode:       502,
 					CoordinatorCause: protocol.CoordinatorCauseProviderDisconnected,
+				}
+				select {
+				case pr.ErrorCh <- message:
+				default:
+					// A terminal result is already buffered. Preserve it and
+					// continue teardown instead of blocking lifecycle locks.
 				}
 			}()
 			func() {
