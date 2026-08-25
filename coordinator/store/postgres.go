@@ -594,6 +594,9 @@ func (s *PostgresStore) migrate(ctx context.Context) error {
 			runtime_hash TEXT NOT NULL DEFAULT '',
 			template_hashes TEXT NOT NULL DEFAULT '',
 			grpc_binary_hash TEXT NOT NULL DEFAULT '',
+			has_app BOOLEAN,
+			has_fan_helper BOOLEAN,
+			has_paged_kernel BOOLEAN,
 			url TEXT NOT NULL DEFAULT '',
 			changelog TEXT NOT NULL DEFAULT '',
 			active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -628,6 +631,18 @@ func (s *PostgresStore) migrate(ctx context.Context) error {
 			ALTER TABLE releases ADD COLUMN IF NOT EXISTS grpc_binary_hash TEXT NOT NULL DEFAULT '';
 		EXCEPTION WHEN others THEN NULL;
 		END $$`,
+		`DO $$ BEGIN
+			ALTER TABLE releases ADD COLUMN IF NOT EXISTS has_app BOOLEAN;
+			EXCEPTION WHEN others THEN NULL;
+			END $$`,
+		`DO $$ BEGIN
+			ALTER TABLE releases ADD COLUMN IF NOT EXISTS has_fan_helper BOOLEAN;
+			EXCEPTION WHEN others THEN NULL;
+			END $$`,
+		`DO $$ BEGIN
+			ALTER TABLE releases ADD COLUMN IF NOT EXISTS has_paged_kernel BOOLEAN;
+			EXCEPTION WHEN others THEN NULL;
+			END $$`,
 		// Drop deprecated image_bridge_hash column. Image generation is no longer
 		// a first-class capability; the hash is meaningless. The DROP is wrapped
 		// in a DO block so it's safe to re-run on databases that already lack it.
@@ -3820,12 +3835,14 @@ func (s *PostgresStore) SetRelease(release *Release) error {
 	defer cancel()
 
 	_, err := s.pool.Exec(ctx,
-		`INSERT INTO releases (version, platform, backend, binary_hash, bundle_hash, metallib_hash, python_hash, runtime_hash, template_hashes, url, changelog, active, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, TRUE, NOW())
+		`INSERT INTO releases (version, platform, backend, binary_hash, bundle_hash, metallib_hash, python_hash, runtime_hash, template_hashes, has_app, has_fan_helper, has_paged_kernel, url, changelog, active, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, TRUE, NOW())
 		 ON CONFLICT (version, platform) DO UPDATE SET
-		   backend = $3, binary_hash = $4, bundle_hash = $5, metallib_hash = $6, python_hash = $7, runtime_hash = $8, template_hashes = $9, url = $10, changelog = $11, active = TRUE`,
+		   backend = $3, binary_hash = $4, bundle_hash = $5, metallib_hash = $6, python_hash = $7, runtime_hash = $8, template_hashes = $9,
+		   has_app = $10, has_fan_helper = $11, has_paged_kernel = $12, url = $13, changelog = $14, active = TRUE`,
 		release.Version, release.Platform, release.Backend, release.BinaryHash, release.BundleHash,
 		release.MetallibHash, release.PythonHash, release.RuntimeHash, release.TemplateHashes,
+		release.HasApp, release.HasFanHelper, release.HasPagedKernel,
 		release.URL, release.Changelog,
 	)
 	if err != nil {
@@ -3841,7 +3858,7 @@ func (s *PostgresStore) ListReleases() []Release {
 	rows, err := s.pool.Query(ctx,
 		`SELECT version, platform, COALESCE(backend, ''), binary_hash, bundle_hash, COALESCE(metallib_hash, ''),
 		        COALESCE(python_hash, ''), COALESCE(runtime_hash, ''), COALESCE(template_hashes, ''),
-		        url, changelog, active, created_at
+		        has_app, has_fan_helper, has_paged_kernel, url, changelog, active, created_at
 		 FROM releases ORDER BY created_at DESC`,
 	)
 	if err != nil {
@@ -3854,6 +3871,7 @@ func (s *PostgresStore) ListReleases() []Release {
 		var r Release
 		if err := rows.Scan(&r.Version, &r.Platform, &r.Backend, &r.BinaryHash, &r.BundleHash, &r.MetallibHash,
 			&r.PythonHash, &r.RuntimeHash, &r.TemplateHashes,
+			&r.HasApp, &r.HasFanHelper, &r.HasPagedKernel,
 			&r.URL, &r.Changelog, &r.Active, &r.CreatedAt); err != nil {
 			continue
 		}
@@ -3869,7 +3887,7 @@ func (s *PostgresStore) GetLatestRelease(platform string) *Release {
 	rows, err := s.pool.Query(ctx,
 		`SELECT version, platform, COALESCE(backend, ''), binary_hash, bundle_hash, COALESCE(metallib_hash, ''),
 		        COALESCE(python_hash, ''), COALESCE(runtime_hash, ''), COALESCE(template_hashes, ''),
-		        url, changelog, active, created_at
+		        has_app, has_fan_helper, has_paged_kernel, url, changelog, active, created_at
 		 FROM releases WHERE platform = $1 AND active = TRUE`, platform,
 	)
 	if err != nil {
@@ -3882,6 +3900,7 @@ func (s *PostgresStore) GetLatestRelease(platform string) *Release {
 		var r Release
 		if err := rows.Scan(&r.Version, &r.Platform, &r.Backend, &r.BinaryHash, &r.BundleHash, &r.MetallibHash,
 			&r.PythonHash, &r.RuntimeHash, &r.TemplateHashes,
+			&r.HasApp, &r.HasFanHelper, &r.HasPagedKernel,
 			&r.URL, &r.Changelog, &r.Active, &r.CreatedAt); err != nil {
 			return nil
 		}
