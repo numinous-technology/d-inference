@@ -4412,6 +4412,94 @@ func (s *PostgresStore) GetProviderBySerial(ctx context.Context, serial string) 
 	return &p, nil
 }
 
+func (s *PostgresStore) GetProviderBySEKey(ctx context.Context, sePublicKey, excludeID string) (*ProviderRecord, error) {
+	if sePublicKey == "" {
+		return nil, nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var p ProviderRecord
+	var locationRaw []byte
+	// Newest DEVICE METADATA bound to this SE key, excluding the registering
+	// session. Identity is the attested SE public key alone — never the serial
+	// (shareable across a re-image / key rotation) or the per-connection id.
+	// Ordered by last_seen desc, ties broken by id desc — the same tie-break the
+	// memory store applies (moreRecentProviderRecord) so both backends agree.
+	// Reputation is fetched separately (GetReputationBySEKey) so a fresh session
+	// that has not yet flushed a reputation row still contributes its newer
+	// account linkage / MDA chain here.
+	err := s.pool.QueryRow(ctx,
+		`SELECT p.id, p.hardware, p.models, p.backend, p.location, p.trust_level, p.attested,
+			p.attestation_result, p.se_public_key, p.serial_number,
+			p.mda_verified, p.mda_cert_chain,
+			p.version, p.runtime_verified, p.python_hash, p.runtime_hash,
+			p.last_challenge_verified, p.failed_challenges, p.account_id,
+			p.lifetime_requests_served, p.lifetime_tokens_generated,
+			p.last_session_requests_served, p.last_session_tokens_generated,
+			p.lifetime_stats, p.last_session_stats,
+			p.registered_at, p.last_seen, p.public_key
+		 FROM providers p
+		 WHERE p.se_public_key = $1 AND p.se_public_key != '' AND p.id != $2
+		 ORDER BY p.last_seen DESC, p.id DESC LIMIT 1`, sePublicKey, excludeID,
+	).Scan(
+		&p.ID, &p.Hardware, &p.Models, &p.Backend,
+		&locationRaw,
+		&p.TrustLevel, &p.Attested,
+		&p.AttestationResult, &p.SEPublicKey, &p.SerialNumber,
+		&p.MDAVerified, &p.MDACertChain,
+		&p.Version, &p.RuntimeVerified, &p.PythonHash, &p.RuntimeHash,
+		&p.LastChallengeVerified, &p.FailedChallenges, &p.AccountID,
+		&p.LifetimeRequestsServed, &p.LifetimeTokensGenerated,
+		&p.LastSessionRequestsServed, &p.LastSessionTokensGenerated,
+		&p.LifetimeStats, &p.LastSessionStats,
+		&p.RegisteredAt, &p.LastSeen, &p.PublicKey,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("store: get provider by se key: %w", err)
+	}
+	p.Location = unmarshalProviderLocation(locationRaw)
+	return &p, nil
+}
+
+func (s *PostgresStore) GetReputationBySEKey(ctx context.Context, sePublicKey, excludeID string) (*ReputationRecord, error) {
+	if sePublicKey == "" {
+		return nil, nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var rep ReputationRecord
+	// Reputation of the newest record that both matches this SE key and actually
+	// carries a reputation row. The inner join drops metadata-only rows, and the
+	// last_seen desc, id desc ordering matches GetProviderBySEKey and the memory
+	// store, so a reconnect recovers the standing an earlier session earned under
+	// the same attested key even when the newest record has no reputation row yet.
+	err := s.pool.QueryRow(ctx,
+		`SELECT r.total_jobs, r.successful_jobs, r.failed_jobs,
+			r.total_uptime_seconds, r.avg_response_time_ms,
+			r.challenges_passed, r.challenges_failed
+		 FROM provider_reputation r
+		 JOIN providers p ON p.id = r.provider_id
+		 WHERE p.se_public_key = $1 AND p.se_public_key != '' AND p.id != $2
+		 ORDER BY p.last_seen DESC, p.id DESC LIMIT 1`, sePublicKey, excludeID,
+	).Scan(
+		&rep.TotalJobs, &rep.SuccessfulJobs, &rep.FailedJobs,
+		&rep.TotalUptimeSeconds, &rep.AvgResponseTimeMs,
+		&rep.ChallengesPassed, &rep.ChallengesFailed,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("store: get reputation by se key: %w", err)
+	}
+	return &rep, nil
+}
+
 func (s *PostgresStore) GetMDAChainBySerial(ctx context.Context, serial string) (json.RawMessage, error) {
 	if serial == "" {
 		return nil, nil

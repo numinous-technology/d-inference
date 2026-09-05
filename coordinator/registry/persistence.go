@@ -1,10 +1,11 @@
 package registry
 
 // Provider state persistence: the bridge between the in-memory registry and the
-// durable store. Loads stored provider records + reputation at startup, restores
-// them onto reconnecting live providers (never resurrecting hardware trust or
-// the MDA proof — that is re-earned live), and writes provider + reputation
-// state back (unconditionally for critical changes, throttled for heartbeats).
+// durable store. On reconnect it restores stored provider records + reputation
+// onto live providers via a LIVE store read keyed by the freshly verified
+// Secure Enclave public key (never resurrecting hardware trust or the MDA proof —
+// that is re-earned live), and writes provider + reputation state back
+// (unconditionally for critical changes, throttled for heartbeats).
 
 import (
 	"context"
@@ -20,43 +21,10 @@ func (r *Registry) SetStore(st store.Store) {
 	r.store = st
 }
 
-// LoadStoredProviders loads provider records and reputation from the store
-// on startup. This pre-populates a lookup table so that reconnecting providers
-// can have their trust level and reputation restored. Providers are NOT added
-// to the active registry (they need to reconnect via WebSocket first).
-func (r *Registry) LoadStoredProviders() map[string]*store.ProviderRecord {
-	if r.store == nil {
-		return nil
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	records, err := r.store.ListProviderRecords(ctx)
-	if err != nil {
-		r.logger.Warn("failed to load stored providers", "error", err)
-		return nil
-	}
-
-	lookup := make(map[string]*store.ProviderRecord, len(records))
-	for i := range records {
-		rec := records[i]
-		// Index by serial number for matching reconnecting providers
-		if rec.SerialNumber != "" {
-			lookup[rec.SerialNumber] = &rec
-		}
-		// Also index by SE public key
-		if rec.SEPublicKey != "" {
-			lookup["sekey:"+rec.SEPublicKey] = &rec
-		}
-	}
-
-	r.logger.Info("loaded stored provider records", "count", len(records))
-	return lookup
-}
-
 // RestoreProviderState restores trust level and reputation from a stored record
-// onto a live provider. Called after a provider reconnects and is matched to
-// its stored state by serial number or SE key.
+// onto a live provider. Called after a provider reconnects and is matched to its
+// stored state by the freshly verified Secure Enclave public key (rec is the
+// newest metadata row for that key; reputation is re-fetched by SE key below).
 func (r *Registry) RestoreProviderState(p *Provider, rec *store.ProviderRecord) {
 	if rec == nil {
 		return
@@ -141,12 +109,18 @@ func (r *Registry) RestoreProviderState(p *Provider, rec *store.ProviderRecord) 
 	p.Stats = providerRecordStats(rec.LifetimeStats, rec.LifetimeRequestsServed, rec.LifetimeTokensGenerated)
 	p.lastSessionStats = providerRecordStats(rec.LastSessionStats, rec.LastSessionRequestsServed, rec.LastSessionTokensGenerated)
 
-	// Restore reputation from store
+	// Restore reputation keyed to the attested SE key, not to rec.ID. rec is the
+	// freshest DEVICE METADATA row, which on a reconnect may be a bare row that has
+	// not flushed its reputation yet; the standing lives on an earlier session's
+	// row under the same SE key. GetReputationBySEKey finds the newest row that
+	// actually carries reputation and excludes this registering session (p.ID) so
+	// its own just-persisted empty row cannot shadow the earned history. A missing
+	// reputation row leaves the neutral cold-start default untouched.
 	if r.store != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		repRec, err := r.store.GetReputation(ctx, rec.ID)
-		if err == nil {
+		repRec, err := r.store.GetReputationBySEKey(ctx, rec.SEPublicKey, p.ID)
+		if err == nil && repRec != nil {
 			p.Reputation.TotalJobs = repRec.TotalJobs
 			p.Reputation.SuccessfulJobs = repRec.SuccessfulJobs
 			p.Reputation.FailedJobs = repRec.FailedJobs

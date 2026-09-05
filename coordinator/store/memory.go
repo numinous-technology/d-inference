@@ -3075,6 +3075,93 @@ func (s *MemoryStore) GetProviderBySerial(_ context.Context, serial string) (*Pr
 	return &cp, nil
 }
 
+func (s *MemoryStore) GetProviderBySEKey(_ context.Context, sePublicKey, excludeID string) (*ProviderRecord, error) {
+	if sePublicKey == "" {
+		return nil, nil
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	best := s.latestProviderBySEKeyLocked(sePublicKey, excludeID, nil)
+	if best == nil {
+		return nil, nil
+	}
+	return cloneProviderRecord(best), nil
+}
+
+func (s *MemoryStore) GetReputationBySEKey(_ context.Context, sePublicKey, excludeID string) (*ReputationRecord, error) {
+	if sePublicKey == "" {
+		return nil, nil
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	best := s.latestProviderBySEKeyLocked(sePublicKey, excludeID, func(p *ProviderRecord) bool {
+		_, ok := s.reputationRecords[p.ID]
+		return ok
+	})
+	if best == nil {
+		return nil, nil
+	}
+	rep := *s.reputationRecords[best.ID]
+	return &rep, nil
+}
+
+// latestProviderBySEKeyLocked returns the provider record bound to sePublicKey
+// (excluding excludeID) that satisfies keep, choosing the newest LastSeen and
+// breaking ties on id descending so the result is deterministic and matches the
+// Postgres ORDER BY. Identity is the SE public key alone — serial-indexed
+// lookups are deliberately not used, because a serial can be shared across a
+// re-image or key rotation. Caller holds s.mu. A nil keep accepts every match.
+func (s *MemoryStore) latestProviderBySEKeyLocked(sePublicKey, excludeID string, keep func(*ProviderRecord) bool) *ProviderRecord {
+	var best *ProviderRecord
+	for _, p := range s.providerRecords {
+		if p.SEPublicKey != sePublicKey || p.ID == excludeID {
+			continue
+		}
+		if keep != nil && !keep(p) {
+			continue
+		}
+		if best == nil || moreRecentProviderRecord(p, best) {
+			best = p
+		}
+	}
+	return best
+}
+
+// moreRecentProviderRecord reports whether a should sort ahead of b: newer
+// LastSeen first, ties broken by lexicographically greater id. The tie-break is
+// shared with the Postgres `ORDER BY ... p.last_seen DESC, p.id DESC` so both
+// backends pick the same record when timestamps are equal.
+func moreRecentProviderRecord(a, b *ProviderRecord) bool {
+	if a.LastSeen.Equal(b.LastSeen) {
+		return a.ID > b.ID
+	}
+	return a.LastSeen.After(b.LastSeen)
+}
+
+// cloneProviderRecord returns a deep copy whose mutable fields — the
+// json.RawMessage byte slices and the pointer fields — do not alias the stored
+// record. GetProviderBySEKey hands this to callers that may mutate the returned
+// value (RestoreProviderState stages MDACertChain), so aliasing the stored slice
+// would let a caller corrupt store state. Scoped to this new API; other getters
+// keep their existing ownership.
+func cloneProviderRecord(p *ProviderRecord) *ProviderRecord {
+	cp := *p
+	cp.Hardware = bytes.Clone(p.Hardware)
+	cp.Models = bytes.Clone(p.Models)
+	cp.AttestationResult = bytes.Clone(p.AttestationResult)
+	cp.MDACertChain = bytes.Clone(p.MDACertChain)
+	cp.LifetimeStats = bytes.Clone(p.LifetimeStats)
+	cp.LastSessionStats = bytes.Clone(p.LastSessionStats)
+	cp.LastChallengeVerified = cloneTimePtr(p.LastChallengeVerified)
+	if p.Location != nil {
+		loc := *p.Location
+		cp.Location = &loc
+	}
+	return &cp
+}
+
 func (s *MemoryStore) GetMDAChainBySerial(_ context.Context, serial string) (json.RawMessage, error) {
 	if serial == "" {
 		return nil, nil
