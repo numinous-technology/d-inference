@@ -1,74 +1,66 @@
 # Numinous Forge on Darkbloom
 
-Forge takes an issue, a requested change, or a pull request through isolated execution and verification. This fork shows the resulting code and the evidence behind it. [Upstream Darkbloom](https://github.com/Layr-Labs/d-inference) and its production systems are unchanged.
+**Two coordinator bug fixes and two test improvements are merged into this fork.**
+Forge prepared scoped changes and ran independent verification; review led to
+revisions and stronger checks. Upstream Darkbloom is unchanged.
 
-| Work | Result to inspect |
-|---|---|
-| Maintain: repair reconnect reputation | [PR #4](https://github.com/numinous-technology/d-inference/pull/4), [regression proof](evidence/issue-regression-proof.json), [task history](evidence/issue-task.json) |
-| Repair CI findings: remove streaming lock dependency | [PR #5](https://github.com/numinous-technology/d-inference/pull/5), [regression proof](evidence/streaming-regression-proof.json), [task history](evidence/streaming-task.json) |
-| Build: add protocol fuzz coverage | [PR #2](https://github.com/numinous-technology/d-inference/pull/2), [task history](evidence/prompted-task.json) |
-| Review: reject broken code | [Closed PR #1](https://github.com/numinous-technology/d-inference/pull/1), [failing CI evidence](evidence/rejected-ci-task.json) |
-| Stabilize verification: repair asynchronous test fixtures | [PR #6](https://github.com/numinous-technology/d-inference/pull/6), [before/after proof](evidence/fixture-regression-proof.json), [PR CI](evidence/fixture-ci-task.json) |
-| Repeat: run a scheduled check | [Verified occurrence](evidence/scheduled-task.json), [both policy-bound occurrences](evidence/schedule-promotion.json); schedule paused after verification |
+**Start here: [the reconnect repair, explained in one PR comment](https://github.com/numinous-technology/d-inference/pull/4#issuecomment-5559327139).**
+It covers the bug, fix, failed-before/passed-after evidence, and the review finding
+that changed the first candidate. No downloads or CLI access needed.
+
+| Change | What the checks demonstrated | Read the PR summary |
+|---|---|---|
+| Preserve reputation on reconnect | Original code fails; repair passes identity and history-selection cases in memory and real PostgreSQL. | [Repair and review](https://github.com/numinous-technology/d-inference/pull/4#issuecomment-5559327139) |
+| Remove a streaming lock dependency | Holding the registry lock reproduces the delay; the repair passes without relaxing the two-second deadline. | [Repair and review](https://github.com/numinous-technology/d-inference/pull/5#issuecomment-5559327450) |
+| Add protocol fuzz coverage | New tests pass; deliberately exposing a private diagnostic field makes them fail. | [Coverage and review](https://github.com/numinous-technology/d-inference/pull/2#issuecomment-5559327720) |
+| Stabilize asynchronous test fixtures | Original fixture failed 6/20 repetitions; repaired fixtures pass 20 race-test repetitions with assertions preserved. | [Test fixes and review](https://github.com/numinous-technology/d-inference/pull/6#issuecomment-5559328006) |
+| Reject broken behavior | Reconnect regressions fail even when other checks pass. This deliberate negative example was closed unmerged. | [Failed verification explained](https://github.com/numinous-technology/d-inference/pull/1#issuecomment-5559328293) |
+
+The repair and test-improvement PRs also passed separate verification of their
+merge with the target branch. Each comment states which checks ran and links to
+the code; a passing check is evidence for review, not a substitute for it.
+
+## What happens on a PR
 
 ```mermaid
-flowchart TB
-    People[Maintainers and contributors] --> Request[Issue or requested improvement]
-    People --> PR[Pull request]
-    Clock[Configured schedule] --> Checks
-    Request --> Work[Implementation worker]
-    Work --> Checks[Fresh verification workers]
-    PR --> Checks
-    Checks --> Evidence[Tests, patch, source identity and task history]
-    Evidence --> Review[Maintainer review]
-    Review --> Feedback[Recorded feedback and revision]
-    Feedback --> Work
-    Review --> Merge[Merge and release decisions]
-    Review --> Policy[Reviewed skills and check updates]
-    Policy --> Work
-    Policy --> Checks
+flowchart LR
+    People[Maintainers and contributors] --> Request[Issue or scoped request]
+    People --> PR[Pull request or new commit]
+    Request --> Agent[Agent prepares a change]
+    Agent --> Verify[Independent verification]
+    PR --> Verify
+    Verify --> Comment[PR comments: progress and results]
+    Comment --> Review[Human review]
+    Review --> Feedback[Feedback and revision]
+    Feedback --> Agent
+    Review --> Merge[Merge decision]
 ```
 
-Maintainers choose scope, resolve behavior questions, and review merges and releases. Contributors bring issues, improvements, and PRs. Forge implements scoped work, runs accepted checks, records attempts, and cleans up workers. Agent output is a candidate until separate verification passes.
+- **Follow progress in the conversation.** One CI comment updates as checks run;
+  an attached engineering task has a separate progress comment.
+- **Review the explanation.** A change summary describes the problem, fix,
+  verification results, and review focus. It is separate from live progress.
+- **Respond to failure.** Read the reported check and linked workflow, fix the
+  change, and push a new commit. CI reruns; ordinary comments do not launch agents.
+- **Decide what ships.** Maintainers review behavior and tests before merging.
 
-The repair demonstrates review as part of the process: the first candidate passed its initial tests but review found a history-selection flaw. Recorded feedback led to a revised candidate and additional tests against memory and real PostgreSQL. Those lessons become versioned checks and skills for future tasks; existing tasks retain their original policy.
+[See the comments exercised through a failure, correction, and passing result](https://github.com/numinous-technology/d-inference/pull/9#issuecomment-5559328592).
 
-CI also exposed a separate pre-existing streaming lock dependency. We retained the failed CI result, reproduced the lock ordering, and submitted a focused repair through the prompted-work lane. When the fork advanced during that task, an explicit continuation carried its reviewed patch and feedback onto the new source; [the superseded task](evidence/streaming-superseded-task.json) remains recorded. A later implementation timed out before exporting its candidate; [the recovery record](evidence/streaming-recovery.json) identifies the successful edits reconstructed from its retained transcript and the new task that verifies them. The platform now preserves unfinished patches on agent deadlines, with a deployed timeout regression in its qualification. CI does not automatically rewrite arbitrary failed PRs; an operator scopes the repair.
+## Checks improve with the code
 
-## Review the checks and agent instructions
+Reviewed regression tests became required checks. Scheduled protocol checks ran
+before and after that update, retaining separate results for each occurrence.
+[Read the follow-up in the fuzz-coverage comment](https://github.com/numinous-technology/d-inference/pull/2#issuecomment-5559327720). The demonstration
+schedule is paused.
 
-The [accepted policy snapshot](policy/darkbloom.json) lists profiles and required checks. [Engineering instructions](policy/skills/engineering.md) and [reputation instructions](policy/skills/reputation.md) carry reviewed lessons into future tasks. Their [manifest](policy/manifest.json) binds the files to the qualified deployment. Changes can be proposed in this fork; Numinous reviews and deploys them before they affect future work. A candidate PR cannot replace its own accepted checks.
+<details>
+<summary>Technical records and agent instructions — optional</summary>
 
-## Inspect the evidence
+The [evidence directory](evidence/) contains machine-readable receipts for audit
+and tooling. The [accepted checks](policy/darkbloom.json),
+[engineering instructions](policy/skills/engineering.md), and
+[reconnect instructions](policy/skills/reputation.md) record the rules used for
+this work. Changes to instructions and checks are reviewed before adoption;
+a candidate cannot replace the checks judging its own result.
 
-[Repair PR CI](evidence/issue-ci-task.json) and [prompted PR CI](evidence/prompted-ci-task.json) record verification of each PR's merge with the target branch.
-
-With operator access to the installed CLI:
-
-```sh
-numinous-forge task list
-numinous-forge task get 66257843079c685ec7a310c33395c780
-numinous-forge task export 66257843079c685ec7a310c33395c780 ./repair-evidence
-numinous-forge schedule runs qualification-protocol
-```
-
-Public receipts omit credentials and private infrastructure details. Operator exports contain the complete input, review notes, attempts, logs, and artifact manifests.
-
-## Demonstrated work
-
-The examples cover coordinator and protocol improvements in this fork. Each linked result records the checks that ran and the revision they verified. Maintainers review the proposed behavior and decide what to merge.
-
-## Follow work on a pull request
-
-The Numinous Forge verification comment updates when checks are queued, running,
-or complete. It identifies the revision and links to the workflow and results.
-New commits trigger verification again and update the same comment.
-
-If a check fails, open the linked run to inspect the failure, then fix the change
-and push a new commit. Forge reruns verification and updates the existing comment.
-A passing check provides evidence for human review; maintainers decide what to
-merge and release.
-
-An engineering task attached to the PR has its own progress comment so you can
-distinguish an agent preparing a change from the independent checks on the PR. The task comment
-shows reproduction, implementation, verification, and review readiness.
+</details>
