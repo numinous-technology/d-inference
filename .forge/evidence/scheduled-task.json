@@ -1,0 +1,48 @@
+{
+  "id": "a0f67fa83277c70706960a6a39c8e9df",
+  "lane": "ci",
+  "state": "verified",
+  "policy_digest": "c0f26d7da586fda2c72702cf736512909371e691eaef0893b0d9eeea404ccd85",
+  "created_at": "2026-09-06T02:18:43.168409352Z",
+  "updated_at": "2026-09-06T02:21:21.077565621Z",
+  "source": {
+    "repo": "https://github.com/numinous-technology/d-inference.git",
+    "commit": "9fc68d990705fd7131dc719980b76842ecd65dc2"
+  },
+  "verified_tree": "51806b699c11cb766fd004a7ca5a97631d19a172",
+  "verification_run_ids": [
+    "b8a8bc1f8692e6be67906d254b47bc2c"
+  ],
+  "runs": [
+    {
+      "id": "b8a8bc1f8692e6be67906d254b47bc2c",
+      "stage": "verify",
+      "attempt": 1,
+      "run_state": "succeeded",
+      "check": "protocol",
+      "outcome": "passed",
+      "exit_code": 0,
+      "tree_sha": "51806b699c11cb766fd004a7ca5a97631d19a172",
+      "tree_after_sha": "51806b699c11cb766fd004a7ca5a97631d19a172",
+      "input_sha256": "bb0c04dab18922e4df1ee99bf772dbd5aed1d91fcc8f756450dfe7e1e919aedc",
+      "required_tests": {
+        "github.com/eigeninference/d-inference/coordinator/protocol::TestCapacityProbeRoundTrip": "pass",
+        "github.com/eigeninference/d-inference/coordinator/protocol::TestCapacityQuoteRoundTrip": "pass",
+        "github.com/eigeninference/d-inference/coordinator/protocol::TestInferenceFailureCodeClosedVocabulary": "pass",
+        "github.com/eigeninference/d-inference/coordinator/protocol::FuzzInferenceErrorWireIsolation": "pass"
+      },
+      "tests_completed": 259,
+      "elapsed_seconds": 14.395652532577515,
+      "source": {
+        "repo": "https://github.com/numinous-technology/d-inference.git",
+        "commit": "9fc68d990705fd7131dc719980b76842ecd65dc2"
+      },
+      "result_sha256": "7acc5585e8f3ebcb79e1aff376a09b5fc29a5b6f1876349efe4a03490a80e4fa",
+      "result_collected": true
+    }
+  ],
+  "notes_recorded": 0,
+  "events_recorded": 4,
+  "distinct_worker_count": 1,
+  "verification_tree_consistent": true
+}

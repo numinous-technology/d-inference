@@ -1,0 +1,133 @@
+{
+  "passed": true,
+  "scope": "Single-project Linux infrastructure, CLI and Forge verification guards",
+  "sequence": {
+    "passed": true,
+    "batch": "numinous-forge-final-20260906-033421-5d81e2a",
+    "build": "5d81e2a55a6985766661ad392561da6606f654d4",
+    "started_at": "2026-09-06T03:34:22.267406+00:00",
+    "finished_at": "2026-09-06T04:13:20.614533+00:00",
+    "steps": [
+      "check_queue_window",
+      "acceptance",
+      "check_artifact_integrity",
+      "check_budget",
+      "check_reaper",
+      "check_source",
+      "check_operator",
+      "qualify_forge",
+      "check_idle"
+    ],
+    "sha256": {
+      "bin/numinous-forge": "e89bb483d63406ae348cba92639451059c6f7828dac584adee4d651737a50731",
+      "bin/forged": "d56308226e6dc825e3527c8449f5532fd00c06635d471de0e9a99bf38847d0a2",
+      "runtime/bootstrap.sh": "0c7aa12220ba85a72ab67011bf1b57a194cac415ec74197cc6442f0b6760c1cb",
+      "runtime/supervisor.py": "72ecf0f0b710bf132422e88f22233d621b659abac14a9f47b3f83890f8466b33",
+      "projects/darkbloom.json": "ba20dcc5b17b943819699917919bf11e2bd283e7c33bb00f3f75d14044517688",
+      "projects/skills/engineering.md": "727f1388c95649c92dbde03962dec3005192726958c8d333b745a0b1fba49930",
+      "projects/skills/reputation.md": "aa7a38b8e729d8a82b8ac32dafb464038543c667ff10838ad6ef75336e188fca"
+    }
+  },
+  "controller_sha256": "d56308226e6dc825e3527c8449f5532fd00c06635d471de0e9a99bf38847d0a2",
+  "deployed_controller_matches": true,
+  "original_receipt_sha256": "3ab7779f07d32c39f75e6c697adc233126fa17d35b60ab4d1d8842e7420ae424",
+  "checks": [
+    {
+      "name": "authentication and input rejection",
+      "passed": true
+    },
+    {
+      "name": "idempotency and conflict",
+      "passed": true
+    },
+    {
+      "name": "EC2 execution and S3 integrity",
+      "passed": true
+    },
+    {
+      "name": "Pi RPC and scoped model access",
+      "passed": true
+    },
+    {
+      "name": "cancel confirms worker termination",
+      "passed": true
+    },
+    {
+      "name": "controller restart adopts existing execution",
+      "passed": true
+    },
+    {
+      "name": "failed-command",
+      "passed": true
+    },
+    {
+      "name": "missing-test",
+      "passed": true
+    },
+    {
+      "name": "timeout",
+      "passed": true
+    },
+    {
+      "name": "isolation",
+      "passed": true
+    },
+    {
+      "name": "no live worker resources after qualification",
+      "passed": true
+    }
+  ],
+  "forge_checks": [
+    {
+      "name": "large S3-backed input roundtrip and execution",
+      "passed": true
+    },
+    {
+      "name": "zero-exit command cannot verify a different source tree",
+      "passed": true
+    },
+    {
+      "name": "Pi timeout preserves tracked and new workspace changes",
+      "passed": true
+    },
+    {
+      "name": "unsupported Mac work blocks before allocating a run",
+      "passed": true
+    }
+  ],
+  "controller_restart_during_execution": true,
+  "budget_admission_test_passed": true,
+  "limitations": [
+    "Single configured project and single controller",
+    "Linux execution only; Mac, Rust sidecar and browser-specific paths block",
+    "Slack not installed",
+    "Schedule paused after demonstration",
+    "Reservations are not an AWS billing hard cutoff"
+  ],
+  "extra_checks": [
+    {
+      "name": "Artifact corruption rejection",
+      "passed": true
+    },
+    {
+      "name": "Cleanup with controller stopped",
+      "passed": true
+    },
+    {
+      "name": "Budget rejection",
+      "passed": true
+    },
+    {
+      "name": "Pinned Darkbloom source checks",
+      "passed": true
+    },
+    {
+      "name": "Aurora pause and resume",
+      "passed": true
+    },
+    {
+      "name": "Durable task/schedule CAS and unfinished queue visibility",
+      "passed": true
+    }
+  ]
+}

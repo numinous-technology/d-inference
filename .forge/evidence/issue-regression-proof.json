@@ -1,0 +1,18 @@
+{
+  "task": "66257843079c685ec7a310c33395c780",
+  "run": "99250d1942a1c89a834647def5c64341",
+  "candidate_sha256": "d371dc48b9c8cdfcbdfd3fe2748e484def4d2680dc54411190f6756181a19fac",
+  "verified_tree": "d48f7ad10dae36a444610f59abca9c04d1b4862d",
+  "required_passed": [
+    "github.com/eigeninference/d-inference/coordinator/store::TestProviderBySEKeyContract/memory",
+    "github.com/eigeninference/d-inference/coordinator/store::TestProviderBySEKeyContract/postgres",
+    "github.com/eigeninference/d-inference/coordinator/store::TestProviderBySEKeyExcludesRegisteringSession/memory",
+    "github.com/eigeninference/d-inference/coordinator/store::TestProviderBySEKeyExcludesRegisteringSession/postgres",
+    "github.com/eigeninference/d-inference/coordinator/store::TestProviderBySEKeyEqualTimestampsDeterministic/memory",
+    "github.com/eigeninference/d-inference/coordinator/store::TestProviderBySEKeyEqualTimestampsDeterministic/postgres",
+    "github.com/eigeninference/d-inference/coordinator/store::TestGetProviderBySEKeyReturnsDeepCopy",
+    "github.com/eigeninference/d-inference/coordinator/api::TestProviderReconnectRestoresMetadataAndReputationIndependently"
+  ],
+  "command_sha256": "3d582db8ee68d678417b7145ba0cab2d06b423261626b3555a398aba4ba8ef7e",
+  "review": "First candidate revised after independent donor-selection and aliasing review; revised exact-method harness passed."
+}

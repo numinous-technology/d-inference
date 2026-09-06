@@ -1,0 +1,33 @@
+{
+  "task": "30589095b35cf00ef20dee1214ba0e27",
+  "candidate_sha256": "9f46bb27bcb7162ebddf2f1d9399e36b2864edbbe5b63a8350499e263c2257e5",
+  "source_base": "9ad2aa17bcb13598804d074c3cdada2aeed80b72",
+  "matches_reviewed_files": true,
+  "focused_race_repetitions": 3,
+  "focused_exit_code": 0,
+  "negative_control": "Reintroduce the old registry lookups without altering regression assertions.",
+  "negative_control_exit_code": 1,
+  "negative_control_failed_tests": [
+    "TestKVBackendAttributionGenuineFaultLiveWinnerNoRegistryLock",
+    "TestKVBackendAttributionPromotedLatchMismatchNoRegistryLock",
+    "TestNoteServingSlotForBackupPointerNoRegistryLock",
+    "TestNoteServingSlotForPrimaryNoRegistryLock",
+    "TestServingSlotLatchDoesNotWaitOnRegistryWriteLock",
+    "TestServingSlotMissingOrMismatchedProviderNoRegistryLock",
+    "TestServingSlotMissingOrMismatchedProviderNoRegistryLock/mismatched",
+    "TestServingSlotMissingOrMismatchedProviderNoRegistryLock/mismatched/latch",
+    "TestServingSlotMissingOrMismatchedProviderNoRegistryLock/mismatched/live",
+    "TestServingSlotMissingOrMismatchedProviderNoRegistryLock/nil",
+    "TestServingSlotMissingOrMismatchedProviderNoRegistryLock/nil/latch",
+    "TestServingSlotMissingOrMismatchedProviderNoRegistryLock/nil/live"
+  ],
+  "first_byte_deadline_seconds": 2,
+  "frozen_terminal_negative_control": "Still passes because restoring global reads does not change the frozen terminal path.",
+  "evidence_sha256": {
+    "finished-focused.jsonl": "02e0a70ca3ca2efd29709d378fdabfcc09ee86442842e4f27099a5fa4674fdf4",
+    "finished-negative-control.jsonl": "900a0f2392fe37ce4530c4788af4c05ba121e10d346c40574c60916f99fa0144",
+    "negative-control.patch": "570979d95b1d236a32e68e0ef631ff7f85f0a8c30fed12b1ff84398ae0cdcf97"
+  },
+  "limitation": "The broader local API run found separate test-fixture failures, retained in streaming-recovery.json. Fresh Forge coordinator verification is required independently.",
+  "relatch_review": "A matching provider/model latch belongs to the same serving attempt. Failed serving attempts retain the provider in the request exclusion set; direct, retained-plan, and queue selection honor it. Reuse within an attempt preserves dispatch-time attribution across heartbeat updates. Incoming requests create new dispatchState values."
+}

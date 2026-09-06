@@ -1,0 +1,89 @@
+{
+  "id": "9caab9bbb2f3de772ed0aa618f51b6a3",
+  "lane": "ci",
+  "state": "verified",
+  "policy_digest": "c0f26d7da586fda2c72702cf736512909371e691eaef0893b0d9eeea404ccd85",
+  "created_at": "2026-09-06T02:07:55.903163635Z",
+  "updated_at": "2026-09-06T02:17:13.847578415Z",
+  "source": {
+    "repo": "https://github.com/numinous-technology/d-inference.git",
+    "commit": "9fc68d990705fd7131dc719980b76842ecd65dc2"
+  },
+  "verified_tree": "51806b699c11cb766fd004a7ca5a97631d19a172",
+  "verification_run_ids": [
+    "a5c4bebb41a4aa2051f268a274219b20",
+    "3f72270e5e91f1ede17ab2323fb71ae1"
+  ],
+  "runs": [
+    {
+      "id": "a5c4bebb41a4aa2051f268a274219b20",
+      "stage": "verify",
+      "attempt": 1,
+      "run_state": "succeeded",
+      "check": "coordinator",
+      "outcome": "passed",
+      "exit_code": 0,
+      "tree_sha": "51806b699c11cb766fd004a7ca5a97631d19a172",
+      "tree_after_sha": "51806b699c11cb766fd004a7ca5a97631d19a172",
+      "input_sha256": "c002dad5b002c5aafc01b6cc12630491cceef6a51883f7c597ea467a7bd7e0ea",
+      "required_tests": {
+        "github.com/eigeninference/d-inference/coordinator/store::TestPostgresProviderRecordStatsPersisted": "pass",
+        "github.com/eigeninference/d-inference/coordinator/store::TestProviderBySEKeyContract/memory": "pass",
+        "github.com/eigeninference/d-inference/coordinator/store::TestProviderBySEKeyContract/postgres": "pass",
+        "github.com/eigeninference/d-inference/coordinator/store::TestProviderBySEKeyExcludesRegisteringSession/memory": "pass",
+        "github.com/eigeninference/d-inference/coordinator/store::TestProviderBySEKeyExcludesRegisteringSession/postgres": "pass",
+        "github.com/eigeninference/d-inference/coordinator/store::TestProviderBySEKeyEqualTimestampsDeterministic/memory": "pass",
+        "github.com/eigeninference/d-inference/coordinator/store::TestProviderBySEKeyEqualTimestampsDeterministic/postgres": "pass",
+        "github.com/eigeninference/d-inference/coordinator/store::TestGetProviderBySEKeyReturnsDeepCopy": "pass",
+        "github.com/eigeninference/d-inference/coordinator/api::TestProviderReconnectRestoresMetadataAndReputationIndependently": "pass",
+        "github.com/eigeninference/d-inference/coordinator/api::TestFirstByteReachesClientWhileRegistryWriteLockHeld": "pass",
+        "github.com/eigeninference/d-inference/coordinator/api::TestServingSlotLatchDoesNotWaitOnRegistryWriteLock": "pass",
+        "github.com/eigeninference/d-inference/coordinator/api::TestNoteServingSlotForPrimaryNoRegistryLock": "pass",
+        "github.com/eigeninference/d-inference/coordinator/api::TestNoteServingSlotForBackupPointerNoRegistryLock": "pass",
+        "github.com/eigeninference/d-inference/coordinator/api::TestKVBackendAttributionPromotedLatchMismatchNoRegistryLock": "pass",
+        "github.com/eigeninference/d-inference/coordinator/api::TestKVBackendAttributionGenuineFaultLiveWinnerNoRegistryLock": "pass",
+        "github.com/eigeninference/d-inference/coordinator/api::TestFrozenTerminalAttributionSurvivesReLatchNoRegistryLock": "pass",
+        "github.com/eigeninference/d-inference/coordinator/api::TestServingSlotMissingOrMismatchedProviderNoRegistryLock/nil/latch": "pass",
+        "github.com/eigeninference/d-inference/coordinator/api::TestServingSlotMissingOrMismatchedProviderNoRegistryLock/nil/live": "pass",
+        "github.com/eigeninference/d-inference/coordinator/api::TestServingSlotMissingOrMismatchedProviderNoRegistryLock/mismatched/latch": "pass",
+        "github.com/eigeninference/d-inference/coordinator/api::TestServingSlotMissingOrMismatchedProviderNoRegistryLock/mismatched/live": "pass",
+        "github.com/eigeninference/d-inference/coordinator/protocol::FuzzInferenceErrorWireIsolation": "pass",
+        "github.com/eigeninference/d-inference/coordinator/api::TestFailoverProviderCleanupJoinsActiveScript": "pass",
+        "github.com/eigeninference/d-inference/coordinator/api::TestDeleteMyProvider_OnlineConflict409": "pass"
+      },
+      "tests_completed": 4831,
+      "elapsed_seconds": 272.2605562210083,
+      "source": {
+        "repo": "https://github.com/numinous-technology/d-inference.git",
+        "commit": "9fc68d990705fd7131dc719980b76842ecd65dc2"
+      },
+      "result_sha256": "8455be160ce2238de9693c1717dd20777007ec675e15ced28d58cafa79e52a53",
+      "result_collected": true
+    },
+    {
+      "id": "3f72270e5e91f1ede17ab2323fb71ae1",
+      "stage": "verify",
+      "attempt": 1,
+      "run_state": "succeeded",
+      "check": "docs",
+      "outcome": "passed",
+      "exit_code": 0,
+      "tree_sha": "51806b699c11cb766fd004a7ca5a97631d19a172",
+      "tree_after_sha": "51806b699c11cb766fd004a7ca5a97631d19a172",
+      "input_sha256": "0699a8da096f0c84d9a7c669de215a12d54133927cb2aa1561c6c6f244eccb3c",
+      "required_tests": {},
+      "tests_completed": 0,
+      "elapsed_seconds": 4.058547019958496,
+      "source": {
+        "repo": "https://github.com/numinous-technology/d-inference.git",
+        "commit": "9fc68d990705fd7131dc719980b76842ecd65dc2"
+      },
+      "result_sha256": "9fb4bd4c70d7e21d920a43b9a51cbf92ea4f6e096b78030ede66e0588ed48d6b",
+      "result_collected": true
+    }
+  ],
+  "notes_recorded": 0,
+  "events_recorded": 5,
+  "distinct_worker_count": 2,
+  "verification_tree_consistent": true
+}

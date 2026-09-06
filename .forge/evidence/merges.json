@@ -1,0 +1,46 @@
+{
+  "issue-merge.json": {
+    "pr": 4,
+    "url": "https://github.com/numinous-technology/d-inference/pull/4",
+    "head": "c5bdd4230bebc58615b4160d5939e94033c5f358",
+    "base": "ab9e8aa7a9143a7864349618fbdcae94094c93a6",
+    "merge_commit": "9ad2aa17bcb13598804d074c3cdada2aeed80b72",
+    "verified_tree": "1ee18fef5e15958a1c06f21d34b341805f8279c3",
+    "ci_task": "2024d2136b28a2ffd56d89ead9ac74ff",
+    "workflow": 34000066360,
+    "merged_tree_matches": true,
+    "workflow_attempt": 2
+  },
+  "prompted-merge.json": {
+    "pr": 2,
+    "url": "https://github.com/numinous-technology/d-inference/pull/2",
+    "head": "fdb9a4572c3dc4941c99bbfd431fb5bae373f068",
+    "base": "ca65068c5a54a690b8cf6e07f2946dc25daf0551",
+    "merge_commit": "69bf5fc9d738e74f4881be90b819b6f7e2ff48ef",
+    "verified_tree": "9007bf4d8238fb88b5a168f93587416eba990595",
+    "ci_task": "572ed1bfc749596600e813e29c468425",
+    "merged_tree_matches": true
+  },
+  "streaming-merge.json": {
+    "pr": 5,
+    "url": "https://github.com/numinous-technology/d-inference/pull/5",
+    "head": "9fadac3bf465b20c0a4338866dedc20e25f17fd6",
+    "base": "9ad2aa17bcb13598804d074c3cdada2aeed80b72",
+    "merge_commit": "bb28702624322b07e189aa7cb532cd068881b665",
+    "verified_tree": "73959842c03bd84c15a1fd52e99695888909e72a",
+    "ci_task": "6d3495919797724f4a5a05515a46286a",
+    "workflow": 34004521779,
+    "merged_tree_matches": true
+  },
+  "fixture-merge.json": {
+    "pr": 6,
+    "url": "https://github.com/numinous-technology/d-inference/pull/6",
+    "head": "9a2a01b34c226873ff46bd1aff1633793f6337e2",
+    "base": "bb28702624322b07e189aa7cb532cd068881b665",
+    "merge_commit": "9fc68d990705fd7131dc719980b76842ecd65dc2",
+    "verified_tree": "51806b699c11cb766fd004a7ca5a97631d19a172",
+    "ci_task": "2f545a2d315f36b1532dffa3fce35976",
+    "workflow": 34005092179,
+    "merged_tree_matches": true
+  }
+}

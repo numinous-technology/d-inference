@@ -1,0 +1,112 @@
+{
+  "original_ci_task": "1d085cf27b0e152d63bd5620f74dd9e1",
+  "original_ci_run": "52d52b54403b8dba9fdeb5078541277d",
+  "test": "TestFirstByteReachesClientWhileRegistryWriteLockHeld",
+  "observed_failure": "HTTP response headers missed the 2-second deadline while the registry write lock was held",
+  "aws_repetitions": [
+    {
+      "source": {
+        "repo": "https://github.com/numinous-technology/d-inference.git",
+        "commit": "ab9e8aa7a9143a7864349618fbdcae94094c93a6"
+      },
+      "run": "00f19ab7c6d3764c61c4b840aec405e2",
+      "natural_repetitions": 20,
+      "passed": 20,
+      "failed": 0,
+      "result_sha256": "1a91996fa727571a00af211f570ac16bbda8266158ba9ec8dd7ce95c93c24e41"
+    },
+    {
+      "source": {
+        "repo": "https://github.com/numinous-technology/d-inference.git",
+        "commit": "deb9d0e49fa03172975d3e600626941863305c5e"
+      },
+      "run": "dd237e45f57640cb64de1d26ceb8c626",
+      "natural_repetitions": 20,
+      "passed": 20,
+      "failed": 0,
+      "result_sha256": "ac0e668c15194ccebd10130cd2022b8227f915cd35b2c56ff617189b9c5b8125"
+    }
+  ],
+  "controlled_reproduction": {
+    "source": "bbf6f83d4bbe66ae1a78c8f5cec898e3fbff5783",
+    "relevant_files_unchanged_at_fork_base": "ab9e8aa7a9143a7864349618fbdcae94094c93a6",
+    "natural_local_repetitions_passed": 40,
+    "diagnostic_pause_ms": 25,
+    "pause_location": "immediately before the existing post-handoff noteServingSlot call",
+    "same_header_assertion_failed": true,
+    "blocked_stack": [
+      "dispatchPrimary",
+      "noteServingSlot",
+      "noteServingSlotFor",
+      "kvBackendAttribution",
+      "Registry.SlotKVBackendTags",
+      "Registry.GetProvider",
+      "RWMutex.RLock"
+    ],
+    "interpretation": "Demonstrates a pre-existing lock dependency under a valid scheduling interleaving and a matching symptom; the original CI execution did not capture a stack."
+  },
+  "repair_task": "aa4791197ffd99d5cc84816bb072b339",
+  "first_candidate_review": {
+    "candidate_sha256": "5ae0f39ddc04002cc2e20171c9f58cf0c7d74c9e1bb4efc891e20fbb9f050742",
+    "verdict": "revision required",
+    "reason": "Primary path fixed; backup latch, promoted winner and genuine-fault live winner still wait for the global registry lock",
+    "diagnostic_results": [
+      {
+        "test": "TestForgeReviewAttributionWithoutRegistryLock/primary_pointer",
+        "action": "pass",
+        "elapsed": 0.01
+      },
+      {
+        "test": "TestForgeReviewAttributionWithoutRegistryLock/backup_latch",
+        "action": "fail",
+        "elapsed": 1.01
+      },
+      {
+        "test": "TestForgeReviewAttributionWithoutRegistryLock/promoted_winner",
+        "action": "fail",
+        "elapsed": 1.01
+      },
+      {
+        "test": "TestForgeReviewAttributionWithoutRegistryLock/genuine_fault_live_winner",
+        "action": "fail",
+        "elapsed": 1
+      },
+      {
+        "test": "TestForgeReviewAttributionWithoutRegistryLock",
+        "action": "fail",
+        "elapsed": 3.02
+      },
+      {
+        "test": "PACKAGE",
+        "action": "fail",
+        "elapsed": 3.074
+      }
+    ],
+    "diagnostic_sha256": "a97e229c8e0ecbba49e9ef00d0dd44e9ac8263ddd64e33aaa3a75cba04886605",
+    "log_sha256": "b04949e609f8a68088f0d979ff1fbad8172f4925040a20abd8094291b05f5264",
+    "primary_negative_control": {
+      "results": [
+        {
+          "test": "TestServingSlotLatchDoesNotWaitOnRegistryWriteLock",
+          "action": "fail",
+          "elapsed": 2.37
+        },
+        {
+          "test": "PACKAGE",
+          "action": "fail",
+          "elapsed": 2.435
+        }
+      ],
+      "log_sha256": "e6a898daffaabaa41d293c4ff1973e500df9106a43b69bc5b25e547108483e51"
+    }
+  },
+  "superseded_task": "ad924ae7465764355f7a07be225384e8",
+  "continuation": {
+    "reason": "Fork master advanced while the task was running; the two new changelog entries conflicted",
+    "source": "9ad2aa17bcb13598804d074c3cdada2aeed80b72",
+    "starting_candidate_sha256": "5ae0f39ddc04002cc2e20171c9f58cf0c7d74c9e1bb4efc891e20fbb9f050742",
+    "rebased_input_patch_sha256": "8729866d0b276ec405a9f6fab9b7836c7c9415350aa7490b78a35aa4667ab34b",
+    "conflict_resolution": "Preserved both Unreleased changelog entries; other patch files applied cleanly",
+    "remaining_review_findings_carried_into_request": true
+  }
+}
