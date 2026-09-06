@@ -110,14 +110,15 @@ func TestDeleteMyProvider_NotFound404(t *testing.T) {
 
 func TestDeleteMyProvider_OnlineConflict409(t *testing.T) {
 	srv, st := newKeyTestServer(t)
-	seedProviderRecord(t, st, "live-p", "SER-ON", "acct-1")
+	seedProviderRecord(t, st, "stored-p", "SER-ON", "acct-1")
 
-	// Register a live provider connection with a matching serial.
+	// Reconnecting sessions have distinct IDs. The live registration must not
+	// overwrite the owned record with its asynchronous pre-link snapshot.
 	live := srv.registry.Register("live-p", nil, &protocol.RegisterMessage{})
 	live.SetAttestationResult(&attestation.VerificationResult{SerialNumber: "SER-ON"})
 
-	r := reqWithUser(http.MethodDelete, "/v1/me/providers/live-p", "", "acct-1")
-	r.SetPathValue("id", "live-p")
+	r := reqWithUser(http.MethodDelete, "/v1/me/providers/stored-p", "", "acct-1")
+	r.SetPathValue("id", "stored-p")
 	w := httptest.NewRecorder()
 	srv.handleDeleteMyProvider(w, r)
 
