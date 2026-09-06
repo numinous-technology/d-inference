@@ -43,6 +43,7 @@ jobs:
           FORGE_BUCKET: ${{ vars.FORGE_BUCKET }}
           FORGE_CLI_KEY: ${{ vars.FORGE_CLI_KEY }}
           FORGE_CLI_SHA256: ${{ vars.FORGE_CLI_SHA256 }}
+          FORGE_CONVERSATIONS: ${{ vars.FORGE_CONVERSATIONS }}
         shell: python
         run: |
           """Trusted GitHub runner. This file is embedded in the installed workflow."""
@@ -270,7 +271,7 @@ jobs:
               def status(state, description):
                   github("/statuses/" + head, {"state": state, "context": status_context, "description": description, "target_url": url})
 
-              reporter = ProgressComment(pr, head, url, api=github) if pr else None
+              reporter = ProgressComment(pr, head, url, api=github) if pr and os.environ.get("FORGE_CONVERSATIONS") != "true" else None
               task = {"lane": "ci", "state": "queued"}
               status("pending", "Verification queued in Numinous Forge")
               try:
@@ -337,6 +338,7 @@ jobs:
         if: ${{ always() && steps.forge.outcome != 'success' }}
         env:
           GH_TOKEN: ${{ github.token }}
+          FORGE_CONVERSATIONS: ${{ vars.FORGE_CONVERSATIONS }}
         shell: python
         run: |
           """Close an interrupted progress report when the Actions job can still finalize."""
@@ -509,6 +511,8 @@ jobs:
               if os.environ["GITHUB_REPOSITORY"] != REPOSITORY or os.environ["GITHUB_REF"] != "refs/heads/master":
                   raise ValueError("untrusted workflow context")
               if os.environ["GITHUB_EVENT_NAME"] != "pull_request_target":
+                  return
+              if os.environ.get("FORGE_CONVERSATIONS") == "true":
                   return
               event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
               head, pr = event["pull_request"]["head"]["sha"], event["number"]
