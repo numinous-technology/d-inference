@@ -64,6 +64,11 @@ The Numinous Forge verification comment updates when checks are queued, running,
 or complete. It identifies the revision and links to the workflow and results.
 New commits trigger verification again and update the same comment.
 
+If a check fails, open the linked run to see which check did not pass and why,
+correct the change, and push a new commit; that pushes a fresh verification onto
+the same comment. A passing check is evidence for human review, not approval to
+merge — maintainers still decide what to merge and release.
+
 An engineering task attached to the PR has its own progress comment so you can
 distinguish an agent preparing a change from the independent checks on the PR. The task comment
 shows reproduction, implementation, verification, and review readiness.
