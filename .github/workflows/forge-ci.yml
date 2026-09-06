@@ -115,10 +115,14 @@ jobs:
                   raise ValueError("unknown task state")
               title, detail = STATES[state]
               reason = task.get("reason", "")
+              if state == "verified" and task.get("lane") != "ci":
+                  detail = "The proposed change passed its accepted checks. PR verification is reported separately."
               if state == "blocked":
                   match = re.fullmatch(r"verification failed: ([a-zA-Z0-9_-]+) \([a-f0-9]{32}\)", reason)
                   if match and match[1] in CHECKS:
                       title, detail = "Checks failed", f"{CHECKS[match[1]]} did not pass. Open the run to inspect the failure."
+                  elif reason == "agent produced no candidate patch":
+                      title, detail = "No code change proposed", "The task ended without a patch. Review the request before asking for a revision."
                   elif reason.startswith(("unsupported capability ", "no accepted CI coverage for ")):
                       title, detail = "Coverage needed", "The changed files need checks that are not configured. This PR has not passed verification."
                   elif reason.startswith("CI revision no longer current:"):
@@ -137,7 +141,7 @@ jobs:
               if checks:
                   label = "Checks passed" if state in {"verified", "published"} else "Checks reached"
                   lines += ["", f"{label}: " + ", ".join(checks) + "."]
-              if state == "implementing" and task.get("agent_attempts", 0) > 1:
+              if state == "implementing" and task.get("agent_attempts", 0) >= 1:
                   lines += ["", "The agent is revising its earlier candidate."]
               return "\n".join(lines)
 
@@ -189,7 +193,8 @@ jobs:
                   label = "PR verification" if self.slot == "ci" else "Engineering task"
                   effective_state = state or task.get("state", "queued")
                   content = f"{self.marker}\n{ownership}\n<!-- state:{effective_state} -->\n<!-- task-revision:{revision} -->\n### Numinous Forge · {label}\n\n" + summary(task, state)
-                  content += f"\n\nRevision: [`{self.head[:12]}`](https://github.com/{REPOSITORY}/commit/{self.head})."
+                  revision_label = "Revision" if self.slot == "ci" else "Source revision"
+                  content += f"\n\n{revision_label}: [`{self.head[:12]}`](https://github.com/{REPOSITORY}/commit/{self.head})."
                   source = task.get("verification_source", {}).get("commit", "")
                   if SHA.fullmatch(source):
                       content += f" Tested merge: `{source[:12]}`."
@@ -398,10 +403,14 @@ jobs:
                   raise ValueError("unknown task state")
               title, detail = STATES[state]
               reason = task.get("reason", "")
+              if state == "verified" and task.get("lane") != "ci":
+                  detail = "The proposed change passed its accepted checks. PR verification is reported separately."
               if state == "blocked":
                   match = re.fullmatch(r"verification failed: ([a-zA-Z0-9_-]+) \([a-f0-9]{32}\)", reason)
                   if match and match[1] in CHECKS:
                       title, detail = "Checks failed", f"{CHECKS[match[1]]} did not pass. Open the run to inspect the failure."
+                  elif reason == "agent produced no candidate patch":
+                      title, detail = "No code change proposed", "The task ended without a patch. Review the request before asking for a revision."
                   elif reason.startswith(("unsupported capability ", "no accepted CI coverage for ")):
                       title, detail = "Coverage needed", "The changed files need checks that are not configured. This PR has not passed verification."
                   elif reason.startswith("CI revision no longer current:"):
@@ -420,7 +429,7 @@ jobs:
               if checks:
                   label = "Checks passed" if state in {"verified", "published"} else "Checks reached"
                   lines += ["", f"{label}: " + ", ".join(checks) + "."]
-              if state == "implementing" and task.get("agent_attempts", 0) > 1:
+              if state == "implementing" and task.get("agent_attempts", 0) >= 1:
                   lines += ["", "The agent is revising its earlier candidate."]
               return "\n".join(lines)
 
@@ -472,7 +481,8 @@ jobs:
                   label = "PR verification" if self.slot == "ci" else "Engineering task"
                   effective_state = state or task.get("state", "queued")
                   content = f"{self.marker}\n{ownership}\n<!-- state:{effective_state} -->\n<!-- task-revision:{revision} -->\n### Numinous Forge · {label}\n\n" + summary(task, state)
-                  content += f"\n\nRevision: [`{self.head[:12]}`](https://github.com/{REPOSITORY}/commit/{self.head})."
+                  revision_label = "Revision" if self.slot == "ci" else "Source revision"
+                  content += f"\n\n{revision_label}: [`{self.head[:12]}`](https://github.com/{REPOSITORY}/commit/{self.head})."
                   source = task.get("verification_source", {}).get("commit", "")
                   if SHA.fullmatch(source):
                       content += f" Tested merge: `{source[:12]}`."
