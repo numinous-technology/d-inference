@@ -85,6 +85,7 @@ jobs:
               "cancelling": ("Stopping", "Cancellation is in progress."),
               "cancelled": ("Cancelled", "The task was cancelled."),
               "superseded": ("New commits need verification", "This result belongs to an older revision. Wait for the check on the latest commit."),
+              "reconnecting": ("Reconnecting to task updates", "The task may still be running. Retrying the status connection."),
               "interrupted": ("Updates interrupted", "This reporter stopped before confirming a result. Check the workflow; the task may still be running."),
               "error": ("Could not complete verification", "Open the workflow for details. No passing result was recorded."),
           }
@@ -178,9 +179,16 @@ jobs:
                   # A stale event must never create a new comment after a newer commit arrives.
                   if not existing and not same_head:
                       return False
+                  revision = task.get("revision", 0)
+                  if type(revision) is not int or revision < 0:
+                      raise ValueError("invalid task revision")
+                  if self.slot != "ci" and existing:
+                      previous = re.search(r"<!-- task-revision:([0-9]+) -->", existing["body"])
+                      if previous and int(previous[1]) > revision:
+                          return False
                   label = "PR verification" if self.slot == "ci" else "Engineering task"
                   effective_state = state or task.get("state", "queued")
-                  content = f"{self.marker}\n{ownership}\n<!-- state:{effective_state} -->\n### Numinous Forge · {label}\n\n" + summary(task, state)
+                  content = f"{self.marker}\n{ownership}\n<!-- state:{effective_state} -->\n<!-- task-revision:{revision} -->\n### Numinous Forge · {label}\n\n" + summary(task, state)
                   content += f"\n\nRevision: [`{self.head[:12]}`](https://github.com/{REPOSITORY}/commit/{self.head})."
                   source = task.get("verification_source", {}).get("commit", "")
                   if SHA.fullmatch(source):
@@ -286,7 +294,16 @@ jobs:
                       if time.monotonic() >= deadline:
                           raise TimeoutError("CI progress deadline exceeded")
                       time.sleep(15)
-                      result = subprocess.run([str(executable), "task", "get", task_id], stdout=subprocess.PIPE, text=True, stderr=subprocess.PIPE, timeout=120, check=True)
+                      for retry in range(3):
+                          try:
+                              result = subprocess.run([str(executable), "task", "get", task_id], stdout=subprocess.PIPE, text=True, stderr=subprocess.PIPE, timeout=120, check=True)
+                              break
+                          except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                              if retry == 2:
+                                  raise
+                              if reporter:
+                                  reporter.write(task, "reconnecting")
+                              time.sleep(5)
                       task = json.loads(result.stdout)
                       if not valid_task(task, head, task_id):
                           raise ValueError("task identity changed during polling")
@@ -351,6 +368,7 @@ jobs:
               "cancelling": ("Stopping", "Cancellation is in progress."),
               "cancelled": ("Cancelled", "The task was cancelled."),
               "superseded": ("New commits need verification", "This result belongs to an older revision. Wait for the check on the latest commit."),
+              "reconnecting": ("Reconnecting to task updates", "The task may still be running. Retrying the status connection."),
               "interrupted": ("Updates interrupted", "This reporter stopped before confirming a result. Check the workflow; the task may still be running."),
               "error": ("Could not complete verification", "Open the workflow for details. No passing result was recorded."),
           }
@@ -444,9 +462,16 @@ jobs:
                   # A stale event must never create a new comment after a newer commit arrives.
                   if not existing and not same_head:
                       return False
+                  revision = task.get("revision", 0)
+                  if type(revision) is not int or revision < 0:
+                      raise ValueError("invalid task revision")
+                  if self.slot != "ci" and existing:
+                      previous = re.search(r"<!-- task-revision:([0-9]+) -->", existing["body"])
+                      if previous and int(previous[1]) > revision:
+                          return False
                   label = "PR verification" if self.slot == "ci" else "Engineering task"
                   effective_state = state or task.get("state", "queued")
-                  content = f"{self.marker}\n{ownership}\n<!-- state:{effective_state} -->\n### Numinous Forge · {label}\n\n" + summary(task, state)
+                  content = f"{self.marker}\n{ownership}\n<!-- state:{effective_state} -->\n<!-- task-revision:{revision} -->\n### Numinous Forge · {label}\n\n" + summary(task, state)
                   content += f"\n\nRevision: [`{self.head[:12]}`](https://github.com/{REPOSITORY}/commit/{self.head})."
                   source = task.get("verification_source", {}).get("commit", "")
                   if SHA.fullmatch(source):
