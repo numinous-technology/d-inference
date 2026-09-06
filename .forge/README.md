@@ -57,3 +57,13 @@ Public receipts omit credentials and private infrastructure details. Operator ex
 ## Demonstrated work
 
 The examples cover coordinator and protocol improvements in this fork. Each linked result records the checks that ran and the revision they verified. Maintainers review the proposed behavior and decide what to merge.
+
+## Follow work on a pull request
+
+The Numinous Forge verification comment updates when checks are queued, running,
+or complete. It identifies the revision and links to the workflow and results.
+New commits trigger verification again and update the same comment.
+
+Engineering tasks have their own progress comment so you can distinguish an
+agent preparing a change from the independent checks on the PR. The task comment
+shows reproduction, implementation, verification, and review readiness.
