@@ -1754,8 +1754,14 @@ func (d *dispatchState) dispatchPrimary() dispatchOutcome {
 	}
 	// The request is now on a slot. Latch that slot's KV backend so the
 	// exhaustion ladder can still attribute the outcome after a failover has
-	// cleared d.provider/d.pr (v0.8.0 paged rollout, Gate G5).
-	d.noteServingSlot()
+	// cleared d.provider/d.pr (v0.8.0 paged rollout, Gate G5). Resolve it from
+	// the provider we already hold: this runs between the handoff and the first
+	// client byte, so it must not take the registry read lock (see
+	// noteServingSlotFor). d.provider is the slot d.pr was written to.
+	if s.beforeServingSlotAttribution != nil {
+		s.beforeServingSlotAttribution()
+	}
+	d.noteServingSlotFor(d.provider, d.pr)
 	// Routing v2 W2: the primary frame is handed off — confirm the retained
 	// alternates in parallel with the in-flight prompt (one probe round per
 	// request; zero added primary latency by construction).
@@ -3060,7 +3066,7 @@ func (d *dispatchState) racePrimaryFailedWaitBackup(backupProvider *registry.Pro
 	// re-latch is a no-op by design: the terminal response will be the
 	// primary's 4xx/422/429, so the primary keeps the attribution even
 	// though the backup keeps racing (noteServingSlotFor's freeze rule).
-	d.noteServingSlotFor(backupPR)
+	d.noteServingSlotFor(backupProvider, backupPR)
 	backupDeadline := time.NewTimer(d.firstTokenWait(d.deadline - d.speculativeAt))
 	for {
 		select {
