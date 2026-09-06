@@ -13,9 +13,8 @@ its independently recorded checks.
 - **Requested change:** The issue describes the desired outcome. An assigned
   agent reports its plan and useful discoveries as it works. A verified candidate
   becomes a draft PR for review, with separate checks on the proposed merge.
-- **Scheduled check:** Each new occurrence reports in its tracking issue. The
-  current overview shows the latest result; milestone comments preserve the
-  history of individual occurrences.
+- **Scheduled check:** Each occurrence updates the same status comment in its
+  tracking issue. The latest result and a short recent history stay together.
 
 ```mermaid
 flowchart LR
@@ -23,15 +22,21 @@ flowchart LR
     Request[Assigned issue] --> Agent[Agent work and observations]
     Agent --> Checks
     Schedule[Scheduled occurrence] --> Checks
-    Agent --> Conversation[Context and milestones in GitHub]
+    Agent --> Conversation[One current status in GitHub]
     Checks --> Conversation
     Conversation --> Review[Maintainer review and next decision]
 ```
 
-A current-work comment answers **where are we now?** Separate milestone comments
-explain discoveries, failures, changes of direction, and completion. Each result
-identifies its source revision. Agent observations are distinguished from
-recorded verification; a proposed patch is not a passing result.
+One Forge status comment answers **where are we now?** It is edited as work
+progresses and when checks finish. It explains the current finding and next
+action, with recorded checks and recent activity in a collapsed section.
+New commits reuse that comment. Routine updates do not add notifications.
+Agent observations are distinguished from recorded verification.
+
+The [engineering board](https://github.com/orgs/numinous-technology/projects/1/views/2)
+groups work into Queued, Working, Verifying, Needs review, Blocked, and Done.
+Open a card to read its issue or PR. The comment and GitHub checks contain the
+review details; no separate Forge dashboard is required.
 
 Maintainers choose scope, resolve behavior questions, and decide what merges.
 CI verifies a contributor's code without automatically modifying it. Ordinary
