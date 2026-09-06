@@ -19,7 +19,6 @@
       "tree_sha": "f6df82f002e433561d50910bd6e36e3d6652675d",
       "input_sha256": "50db987f018d7df3fe47f0509780256c72207f0b69bb6c7582662c81f13c4586",
       "elapsed_seconds": 956.8582091331482,
-      "model": "claude-opus-4-8",
       "tool_executions": 46,
       "source": {
         "repo": "https://github.com/numinous-technology/d-inference.git",
