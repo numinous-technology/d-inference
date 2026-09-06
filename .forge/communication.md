@@ -10,13 +10,13 @@ When a candidate is ready, explain the change and remaining concerns. When
 independent checks finish, distinguish observed results from untested claims.
 
 Keep one status comment per issue or PR and edit it in place. Its current
-explanation must stand alone. Put check details and a short recent activity
-history in a collapsed section. Reuse the comment across new commits and
+explanation must stand alone. Put check details in a collapsed section. Keep
+activity history in execution records, not in the comment. Reuse the comment across new commits and
 scheduled occurrences. Completion updates the comment and check status.
 
-Reserve separate replies for an explicit question or a decision that requires
-a person. Put actionable code findings in a review attached to the relevant
-code. Do not post tool-by-tool narration or routine milestone announcements. When a run
+Put questions, decisions, and findings in that same status comment. Do not add
+separate automatic replies, task summaries, or completion announcements. Human
+discussion remains separate. Do not post tool-by-tool narration. When a run
 fails or is interrupted, say what remains unresolved. Never invent a finding
 just to make an uneventful run sound productive.
 

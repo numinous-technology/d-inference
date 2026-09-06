@@ -14,7 +14,7 @@ its independently recorded checks.
   agent reports its plan and useful discoveries as it works. A verified candidate
   becomes a draft PR for review, with separate checks on the proposed merge.
 - **Scheduled check:** Each occurrence updates the same status comment in its
-  tracking issue. The latest result and a short recent history stay together.
+  tracking issue. The latest result replaces the previous result.
 
 ```mermaid
 flowchart LR
@@ -29,7 +29,8 @@ flowchart LR
 
 One Forge status comment answers **where are we now?** It is edited as work
 progresses and when checks finish. It explains the current finding and next
-action, with recorded checks and recent activity in a collapsed section.
+action, with recorded checks in a collapsed section. Full run history stays in
+execution records; the comment shows only the current state.
 New commits reuse that comment. Routine updates do not add notifications.
 Agent observations are distinguished from recorded verification.
 
@@ -40,7 +41,8 @@ review details; no separate Forge dashboard is required.
 
 Maintainers choose scope, resolve behavior questions, and decide what merges.
 CI verifies a contributor's code without automatically modifying it. Ordinary
-comments do not trigger additional engineering work.
+comments do not trigger additional engineering work. One service owns Forge's
+single status comment. The CI workflow reports checks and cannot post comments.
 
 ## How Forge communicates
 
