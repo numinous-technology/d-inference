@@ -1,0 +1,98 @@
+{
+  "id": "b22197920e2b15136c685b1fcd6a04b7",
+  "lane": "ci",
+  "state": "blocked",
+  "policy_digest": "f6b77f17eafcfc1feefc4567319da0e564d02ed90cc71129956ec97444f4781d",
+  "created_at": "2026-09-05T22:50:19.829635194Z",
+  "updated_at": "2026-09-05T23:18:57.289019684Z",
+  "source": {
+    "repo": "https://github.com/numinous-technology/d-inference.git",
+    "commit": "21ff4c6ae7a246f52f214e9a86a0c14a10f0dfc1"
+  },
+  "base_sha": "ca65068c5a54a690b8cf6e07f2946dc25daf0551",
+  "pr_number": 1,
+  "verification_source": {
+    "repo": "https://github.com/numinous-technology/d-inference.git",
+    "commit": "d4298a3ed66f64802fa46bce4e063a58fdbd9bab"
+  },
+  "runs": [
+    {
+      "id": "79d1db2170e0d64e87f88ab4dc2ef7fd",
+      "stage": "verify",
+      "attempt": 1,
+      "run_state": "succeeded",
+      "check": "protocol",
+      "outcome": "passed",
+      "exit_code": 0,
+      "tree_sha": "aa37c7e7ff27af15b3c42e2056a9f6292ecd565d",
+      "tree_after_sha": "aa37c7e7ff27af15b3c42e2056a9f6292ecd565d",
+      "input_sha256": "3c800a1584b8d9fdd5af3b2b7b1860664bb6a527fe3e5d69b5111b3e6977bc57",
+      "required_tests": {
+        "github.com/eigeninference/d-inference/coordinator/protocol::TestCapacityProbeRoundTrip": "pass",
+        "github.com/eigeninference/d-inference/coordinator/protocol::TestCapacityQuoteRoundTrip": "pass",
+        "github.com/eigeninference/d-inference/coordinator/protocol::TestInferenceFailureCodeClosedVocabulary": "pass"
+      },
+      "tests_completed": 244,
+      "elapsed_seconds": 16.51482105255127,
+      "source": {
+        "repo": "https://github.com/numinous-technology/d-inference.git",
+        "commit": "d4298a3ed66f64802fa46bce4e063a58fdbd9bab"
+      },
+      "result_sha256": "1cbcf9be3d9d993c436d51a9289498a37ad48f23227c34020e8198124c2d901f",
+      "result_collected": true
+    },
+    {
+      "id": "7684ba8d0a15b51cc9e4e1d00aa6c22a",
+      "stage": "verify",
+      "attempt": 1,
+      "run_state": "succeeded",
+      "check": "docs",
+      "outcome": "passed",
+      "exit_code": 0,
+      "tree_sha": "aa37c7e7ff27af15b3c42e2056a9f6292ecd565d",
+      "tree_after_sha": "aa37c7e7ff27af15b3c42e2056a9f6292ecd565d",
+      "input_sha256": "0490a7dc0168e96ed0837e81ba05d3f8f23864ce3d2e5a14203870fcbd824933",
+      "required_tests": {},
+      "tests_completed": 0,
+      "elapsed_seconds": 4.152960777282715,
+      "source": {
+        "repo": "https://github.com/numinous-technology/d-inference.git",
+        "commit": "d4298a3ed66f64802fa46bce4e063a58fdbd9bab"
+      },
+      "result_sha256": "0f5798a9e2fb114e77d19a4dfda8e623609060b7fe2845fb493525c8e6e65785",
+      "result_collected": true
+    },
+    {
+      "id": "3e7f27ed51408db9715be540494fcf80",
+      "stage": "verify",
+      "attempt": 1,
+      "run_state": "failed",
+      "check": "coordinator",
+      "outcome": "failed",
+      "exit_code": 1,
+      "tree_sha": "aa37c7e7ff27af15b3c42e2056a9f6292ecd565d",
+      "tree_after_sha": "aa37c7e7ff27af15b3c42e2056a9f6292ecd565d",
+      "input_sha256": "4e2d41d083a376c70b58925e1c0931929a948be0aa143de3f804a027095bd105",
+      "required_tests": {
+        "github.com/eigeninference/d-inference/coordinator/store::TestPostgresProviderRecordStatsPersisted": "pass"
+      },
+      "tests_completed": 4789,
+      "elapsed_seconds": 260.28693413734436,
+      "source": {
+        "repo": "https://github.com/numinous-technology/d-inference.git",
+        "commit": "d4298a3ed66f64802fa46bce4e063a58fdbd9bab"
+      },
+      "result_sha256": "a2991946764ba85e95a7057fe2725d9dc16f56b8f8512123c01f9cda1726a19e",
+      "result_collected": true,
+      "failed_tests": [
+        "github.com/eigeninference/d-inference/coordinator/api::TestProviderReconnectDoesNotRestoreAnotherSEKey",
+        "github.com/eigeninference/d-inference/coordinator/api::TestProviderReconnectRestoresReputationEarnedAfterStartup",
+        "github.com/eigeninference/d-inference/coordinator/api::TestProviderReconnectRestoresReputationEarnedAfterStartup/with_serial",
+        "github.com/eigeninference/d-inference/coordinator/api::TestProviderReconnectRestoresReputationEarnedAfterStartup/without_serial"
+      ]
+    }
+  ],
+  "notes_recorded": 0,
+  "events_recorded": 6,
+  "distinct_worker_count": 3
+}

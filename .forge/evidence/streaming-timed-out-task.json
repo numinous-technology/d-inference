@@ -1,0 +1,33 @@
+{
+  "id": "aa4791197ffd99d5cc84816bb072b339",
+  "lane": "prompted",
+  "state": "blocked",
+  "policy_digest": "f6b77f17eafcfc1feefc4567319da0e564d02ed90cc71129956ec97444f4781d",
+  "created_at": "2026-09-06T00:47:07.333011987Z",
+  "updated_at": "2026-09-06T01:20:08.808951698Z",
+  "source": {
+    "repo": "https://github.com/numinous-technology/d-inference.git",
+    "commit": "9ad2aa17bcb13598804d074c3cdada2aeed80b72"
+  },
+  "runs": [
+    {
+      "id": "5fc0e1d5b7401200930fede98f663485",
+      "stage": "implement",
+      "attempt": 1,
+      "run_state": "timed_out",
+      "outcome": "timed_out",
+      "tree_sha": "96ad86f79ab6fc09c8ead156ebca71bd0ba5a82c",
+      "input_sha256": "dfc01cfbcb1113ceff8d83fbea7364b52db012f645c486d42bac9a41e4f69766",
+      "elapsed_seconds": 1802.4812834262848,
+      "source": {
+        "repo": "https://github.com/numinous-technology/d-inference.git",
+        "commit": "9ad2aa17bcb13598804d074c3cdada2aeed80b72"
+      },
+      "result_sha256": "af5b338d4183eb2f44cb1681ce45d58b12ad31ad2ce567ad3690a62ba20cb6e2",
+      "result_collected": true
+    }
+  ],
+  "notes_recorded": 2,
+  "events_recorded": 4,
+  "distinct_worker_count": 1
+}

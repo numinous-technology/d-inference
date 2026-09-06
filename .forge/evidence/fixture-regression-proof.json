@@ -1,0 +1,40 @@
+{
+  "base": "9ad2aa17bcb13598804d074c3cdada2aeed80b72",
+  "patch_sha256": "95aa9db513bed66fd4873229a69dde4fb690b8b009ea379f10ed76af1b4e330a",
+  "patch_bytes": 4333,
+  "files": [
+    "coordinator/api/failover_integration_test.go",
+    "coordinator/api/me_delete_test.go"
+  ],
+  "production_files_changed": false,
+  "baseline_focused_exit_code": 1,
+  "baseline_delete_failures_of_20": 6,
+  "fixed_focused_exit_code": 0,
+  "negative_cleanup_exit_code": 1,
+  "commands": [
+    {
+      "command": "go test -race -json ./coordinator/api -run '^(TestDeleteMyProvider_OnlineConflict409|TestServiceReasoningPolicyTracksAliasCapacityFallback|TestRecoverMiddlewareCatchesPanic)$' -count=20",
+      "target": "unchanged base",
+      "log": "base-focused.jsonl",
+      "exit_code": 1
+    },
+    {
+      "command": "go test -race -json ./coordinator/api -run '^TestFailoverProviderCleanupJoinsActiveScript$' -count=1",
+      "target": "unchanged base plus new regression only",
+      "log": "base-cleanup-regression.jsonl",
+      "exit_code": 1
+    },
+    {
+      "command": "go test -race -json ./coordinator/api -run '^(TestDeleteMyProvider_OnlineConflict409|TestServiceReasoningPolicyTracksAliasCapacityFallback|TestRecoverMiddlewareCatchesPanic|TestFailoverProviderCleanupJoinsActiveScript)$' -count=20",
+      "target": "fixed test fixtures",
+      "log": "fixed-focused.jsonl",
+      "exit_code": 0
+    }
+  ],
+  "fixed_race_repetitions": 20,
+  "evidence_sha256": {
+    "base-focused.jsonl": "bdea574c862c8309a04d4c025d033120f0234a0bbe1c51dd666d5148d3c832ed",
+    "base-cleanup-regression.jsonl": "e5b2b2079a2cb6769a8b5efe3a75b877bbacdf669b2c4f7f70498b4f0e1b28ab",
+    "fixed-focused.jsonl": "bc2ae27e86937f1d3fbfc2d478ab1835b0c500b84c09b11740dff073dc4cfec0"
+  }
+}

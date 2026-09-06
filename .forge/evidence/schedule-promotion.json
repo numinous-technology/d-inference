@@ -1,0 +1,28 @@
+{
+  "passed": true,
+  "schedule": "qualification-protocol",
+  "task": "a0f67fa83277c70706960a6a39c8e9df",
+  "previous_task": "213969b2bb6dfc0bfaeaf2098146e796",
+  "source": {
+    "repo": "https://github.com/numinous-technology/d-inference.git",
+    "commit": "9fc68d990705fd7131dc719980b76842ecd65dc2"
+  },
+  "policy_digest": "c0f26d7da586fda2c72702cf736512909371e691eaef0893b0d9eeea404ccd85",
+  "history_tasks": [
+    {
+      "id": "a0f67fa83277c70706960a6a39c8e9df",
+      "state": "verified",
+      "source": "9fc68d990705fd7131dc719980b76842ecd65dc2",
+      "policy_digest": "c0f26d7da586fda2c72702cf736512909371e691eaef0893b0d9eeea404ccd85"
+    },
+    {
+      "id": "213969b2bb6dfc0bfaeaf2098146e796",
+      "state": "verified",
+      "source": "bbf6f83d4bbe66ae1a78c8f5cec898e3fbff5783",
+      "policy_digest": "f6b77f17eafcfc1feefc4567319da0e564d02ed90cc71129956ec97444f4781d"
+    }
+  ],
+  "paused": true,
+  "previous_occurrence_unchanged": true,
+  "fuzz_regression_required_and_passed": true
+}

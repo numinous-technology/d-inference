@@ -110,11 +110,12 @@ jobs:
                   raise ValueError("CLI key and SHA must identify an immutable release")
               if key.split("/")[2] != expected:
                   raise ValueError("CLI key and expected hash differ")
-              executable = Path(os.environ["RUNNER_TEMP"]) / "forge"
+              executable = Path(os.environ["RUNNER_TEMP"]) / "numinous-forge"
               subprocess.run(["aws", "s3", "cp", "s3://" + os.environ["FORGE_BUCKET"] + "/" + key, str(executable), "--only-show-errors"], check=True)
               if hashlib.sha256(executable.read_bytes()).hexdigest() != expected:
                   raise ValueError("CLI checksum mismatch")
               executable.chmod(0o700)
+              print(f"CLI: {executable.name}; SHA-256: {expected}", flush=True)
               url = f"https://github.com/{REPOSITORY}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
               status_context = "Numinous Forge / verification" if pr else "Numinous Forge / baseline"
 

@@ -1,0 +1,10 @@
+{
+  "project_version": "2026-09-06.2",
+  "qualified_build": "5d81e2a55a6985766661ad392561da6606f654d4",
+  "files_sha256": {
+    "darkbloom.json": "ba20dcc5b17b943819699917919bf11e2bd283e7c33bb00f3f75d14044517688",
+    "skills/engineering.md": "727f1388c95649c92dbde03962dec3005192726958c8d333b745a0b1fba49930",
+    "skills/reputation.md": "aa7a38b8e729d8a82b8ac32dafb464038543c667ff10838ad6ef75336e188fca"
+  },
+  "application": "Reviewed snapshot. Changes proposed here do not change accepted checks until Numinous reviews and deploys them."
+}

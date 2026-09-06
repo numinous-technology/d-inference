@@ -1,0 +1,45 @@
+{
+  "base": "9ad2aa17bcb13598804d074c3cdada2aeed80b72",
+  "task": "aa4791197ffd99d5cc84816bb072b339",
+  "failed_run": "5fc0e1d5b7401200930fede98f663485",
+  "transcript_sha256": "2c5102f3c7577b7d6fceb6ab698e3f4265c7530da826213adfcc77a3bd2164f0",
+  "starting_patch_sha256": "8729866d0b276ec405a9f6fab9b7836c7c9415350aa7490b78a35aa4667ab34b",
+  "recovered_patch_sha256": "9c43eaa1b5d28a4c3077aa722ccfa117f4593abedeab58e29299586f1684816e",
+  "recovered_patch_bytes": 31505,
+  "recovered_files": [
+    "CHANGELOG.md",
+    "coordinator/api/dispatch.go",
+    "coordinator/api/dispatch_speculative_outcome_test.go",
+    "coordinator/api/first_byte_serving_slot_lock_test.go",
+    "coordinator/api/kv_backend_metrics.go",
+    "coordinator/api/kv_backend_metrics_test.go",
+    "coordinator/api/server.go",
+    "coordinator/api/serving_slot_lock_helpers_test.go"
+  ],
+  "unrecovered_source_edits": [],
+  "limitations": [
+    "Recovered source is a new locally reconstructed candidate, not an artifact produced by the timed-out worker.",
+    "No test command or arbitrary bash from transcript executed. Independent tests recorded separately."
+  ],
+  "replayed_successful_source_edits": 11,
+  "verification": "Recovered changes require a new task and independent verification; the timed-out run did not produce a verified candidate.",
+  "continuation_task": "30589095b35cf00ef20dee1214ba0e27",
+  "operator_finished_patch_sha256": "5b9a568366e94feb09cbbc045a85cd4f3172b6714d88cb518ebc9e9f7c6bc838",
+  "finishing_changes": [
+    "Shorten added production comments",
+    "Bound regression cleanup waits",
+    "Cover missing and mismatched retained providers"
+  ],
+  "independent_review": {
+    "focused_race_repetitions": 3,
+    "focused_exit_code": 0,
+    "old_lookup_negative_control_exit_code": 1,
+    "full_local_api_exit_code": 1,
+    "full_local_api_findings": [
+      "TestDeleteMyProvider_OnlineConflict409 returned ownership403 instead of409",
+      "TestServiceReasoningPolicyTracksAliasCapacityFallback provider goroutine logged after testcompletion"
+    ],
+    "baseline_attribution": "Both affected fixtures are unchanged from the base. The unchanged-base delete fixture fails6of20repetitions; the old cleanup fails a new realHTTP regression. Separate fixture-only fixes pass20focusedrace repetitions.",
+    "separate_fix_proof": "fixture-regression-proof.json"
+  }
+}

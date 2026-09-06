@@ -1,0 +1,240 @@
+{
+  "name": "darkbloom",
+  "version": "2026-09-06.2",
+  "repositories": [
+    "https://github.com/Layr-Labs/d-inference.git",
+    "https://github.com/numinous-technology/d-inference.git"
+  ],
+  "publish_repository": "numinous-technology/d-inference",
+  "profiles": [
+    {
+      "name": "protocol",
+      "instructions": "Verify protocol behavior and preserve wire compatibility. For prompted work implement only the requested coverage or behavior.",
+      "skills": [
+        "engineering"
+      ],
+      "checks": [
+        "protocol"
+      ],
+      "timeout_seconds": 1200
+    },
+    {
+      "name": "coordinator",
+      "instructions": "Work on the Go coordinator. Preserve API compatibility, authentication, persistence, and live-isolated test coverage.",
+      "skills": [
+        "engineering"
+      ],
+      "checks": [
+        "coordinator",
+        "docs"
+      ],
+      "timeout_seconds": 1800
+    },
+    {
+      "name": "reputation",
+      "instructions": "Fix the demonstrated provider reconnect reputation failure. Keep the change focused; inspect both memory and PostgreSQL paths. Keep the supplied regression tests unchanged. Add coverage for missing history and repeated reconnects.",
+      "skills": [
+        "engineering",
+        "reputation"
+      ],
+      "checks": [
+        "reconnect",
+        "coordinator",
+        "docs"
+      ],
+      "timeout_seconds": 1800
+    },
+    {
+      "name": "provider",
+      "instructions": "Work on the Swift provider with native Apple Silicon verification.",
+      "skills": [
+        "engineering"
+      ],
+      "checks": [
+        "provider"
+      ],
+      "timeout_seconds": 1800
+    },
+    {
+      "name": "ci",
+      "instructions": "Run accepted checks for the pinned pull request revision.",
+      "skills": [
+        "engineering"
+      ],
+      "checks": [
+        "protocol",
+        "docs"
+      ],
+      "timeout_seconds": 1200
+    }
+  ],
+  "checks": [
+    {
+      "name": "protocol",
+      "command": [
+        "go",
+        "test",
+        "-json",
+        "./coordinator/protocol",
+        "-count=1"
+      ],
+      "required_tests": [
+        "github.com/eigeninference/d-inference/coordinator/protocol::TestCapacityProbeRoundTrip",
+        "github.com/eigeninference/d-inference/coordinator/protocol::TestCapacityQuoteRoundTrip",
+        "github.com/eigeninference/d-inference/coordinator/protocol::TestInferenceFailureCodeClosedVocabulary",
+        "github.com/eigeninference/d-inference/coordinator/protocol::FuzzInferenceErrorWireIsolation"
+      ],
+      "capability": "linux",
+      "timeout_seconds": 600
+    },
+    {
+      "name": "reconnect",
+      "command": [
+        "go",
+        "test",
+        "-json",
+        "./coordinator/api",
+        "-run",
+        "^TestProviderReconnect(RestoresReputationEarnedAfterStartup|DoesNotRestoreAnotherSEKey)$",
+        "-count=1"
+      ],
+      "required_tests": [
+        "github.com/eigeninference/d-inference/coordinator/api::TestProviderReconnectRestoresReputationEarnedAfterStartup",
+        "github.com/eigeninference/d-inference/coordinator/api::TestProviderReconnectDoesNotRestoreAnotherSEKey"
+      ],
+      "files": {
+        "coordinator/api/provider_reputation_reconnect_test.go": "package api\n\nimport (\n\t\"context\"\n\t\"encoding/json\"\n\t\"io\"\n\t\"log/slog\"\n\t\"net/http/httptest\"\n\t\"strings\"\n\t\"testing\"\n\t\"time\"\n\n\t\"github.com/eigeninference/d-inference/coordinator/attestation\"\n\t\"github.com/eigeninference/d-inference/coordinator/protocol\"\n\t\"github.com/eigeninference/d-inference/coordinator/registry\"\n\t\"github.com/eigeninference/d-inference/coordinator/store\"\n\t\"nhooyr.io/websocket\"\n)\n\nfunc TestProviderReconnectRestoresReputationEarnedAfterStartup(t *testing.T) {\n\tfor _, serial := range []string{\"reconnect-device\", \"\"} {\n\t\tname := \"with_serial\"\n\t\tif serial == \"\" {\n\t\t\tname = \"without_serial\"\n\t\t}\n\t\tt.Run(name, func(t *testing.T) { testProviderReconnectRestoresReputation(t, serial) })\n\t}\n}\n\nfunc testProviderReconnectRestoresReputation(t *testing.T, serial string) {\n\tt.Helper()\n\tlogger := slog.New(slog.NewTextHandler(io.Discard, nil))\n\tst := store.NewMemory(store.Config{})\n\treg := registry.New(logger)\n\tsrv := NewServer(reg, st, ServerConfig{}, logger)\n\tt.Cleanup(srv.Close)\n\tpublicKey := testPublicKeyB64()\n\tblob := createTestAttestationJSONWithSerial(t, serial, publicKey)\n\tidentity, err := attestation.VerifyJSON(blob)\n\tif err != nil || !identity.Valid {\n\t\tt.Fatalf(\"invalid test attestation: %v, %+v\", err, identity)\n\t}\n\n\t// This session and its successful work did not exist in the startup snapshot.\n\tctx := context.Background()\n\tif err := st.UpsertProvider(ctx, store.ProviderRecord{\n\t\tID: \"previous-session\", SerialNumber: \"reconnect-device\",\n\t\tSEPublicKey: identity.PublicKey, TrustLevel: \"hardware\", Attested: true,\n\t\tLastSeen: time.Now(),\n\t}); err != nil {\n\t\tt.Fatal(err)\n\t}\n\twant := store.ReputationRecord{TotalJobs: 52, SuccessfulJobs: 50, FailedJobs: 2,\n\t\tTotalUptimeSeconds: 3600, AvgResponseTimeMs: 120, ChallengesPassed: 12, ChallengesFailed: 1}\n\tif err := st.UpsertReputation(ctx, \"previous-session\", want); err != nil {\n\t\tt.Fatal(err)\n\t}\n\tmsg := &protocol.RegisterMessage{Type: protocol.TypeRegister, PublicKey: publicKey,\n\t\tAttestation: blob, Version: minProviderVersionForReconnectAttestation,\n\t\tBackend: \"mlx-swift\", Models: []protocol.ModelInfo{{ID: \"reconnect-model\"}}}\n\tts := httptest.NewServer(srv.Handler())\n\tt.Cleanup(ts.Close)\n\twsCtx, cancel := context.WithTimeout(ctx, 5*time.Second)\n\tdefer cancel()\n\tconn, _, err := websocket.Dial(wsCtx, \"ws\"+strings.TrimPrefix(ts.URL, \"http\")+\"/ws/provider\", nil)\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n\tdefer conn.CloseNow()\n\tdata, err := json.Marshal(msg)\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n\tif err := conn.Write(wsCtx, websocket.MessageText, data); err != nil {\n\t\tt.Fatal(err)\n\t}\n\t// desired_models is sent after registration verification and state restoration.\n\tfor {\n\t\t_, data, err := conn.Read(wsCtx)\n\t\tif err != nil {\n\t\t\tt.Fatal(err)\n\t\t}\n\t\tvar message struct {\n\t\t\tType string `json:\"type\"`\n\t\t}\n\t\tif err := json.Unmarshal(data, &message); err != nil {\n\t\t\tt.Fatal(err)\n\t\t}\n\t\tif message.Type == \"desired_models\" {\n\t\t\tbreak\n\t\t}\n\t}\n\tp := findProviderByModel(reg, \"reconnect-model\")\n\tif p == nil {\n\t\tt.Fatal(\"registered provider missing\")\n\t}\n\tp.Mu().Lock()\n\tdefer p.Mu().Unlock()\n\tif p.Reputation.TotalJobs != want.TotalJobs || p.Reputation.SuccessfulJobs != want.SuccessfulJobs ||\n\t\tp.Reputation.FailedJobs != want.FailedJobs || p.Reputation.TotalUptime != time.Hour ||\n\t\tp.Reputation.AvgResponseTime != 120*time.Millisecond || p.Reputation.ChallengesPassed != 12 ||\n\t\tp.Reputation.ChallengesFailed != 1 {\n\t\tt.Fatalf(\"reconnect lost persisted reputation: got %+v, want %+v\", p.Reputation, want)\n\t}\n\tif p.TrustLevel != registry.TrustSelfSigned || p.MDAVerified {\n\t\tt.Fatalf(\"reconnect must re-earn hardware trust: trust=%s mda=%v\", p.TrustLevel, p.MDAVerified)\n\t}\n}\n\nfunc TestProviderReconnectDoesNotRestoreAnotherSEKey(t *testing.T) {\n\tlogger := slog.New(slog.NewTextHandler(io.Discard, nil))\n\tst := store.NewMemory(store.Config{})\n\tpublicKey := testPublicKeyB64()\n\tblob := createTestAttestationJSONWithSerial(t, \"shared-serial\", publicKey)\n\tctx := context.Background()\n\tif err := st.UpsertProvider(ctx, store.ProviderRecord{\n\t\tID: \"other-session\", SEPublicKey: \"different-signing-key\", SerialNumber: \"shared-serial\",\n\t\tAccountID: \"other-account\", TrustLevel: \"hardware\", LastSeen: time.Now(),\n\t}); err != nil {\n\t\tt.Fatal(err)\n\t}\n\tif err := st.UpsertReputation(ctx, \"other-session\", store.ReputationRecord{TotalJobs: 99, SuccessfulJobs: 99}); err != nil {\n\t\tt.Fatal(err)\n\t}\n\treg := registry.New(logger)\n\tsrv := NewServer(reg, st, ServerConfig{}, logger)\n\tt.Cleanup(srv.Close)\n\tmsg := &protocol.RegisterMessage{Type: protocol.TypeRegister, PublicKey: publicKey,\n\t\tAttestation: blob, Version: minProviderVersionForReconnectAttestation}\n\tp := reg.Register(\"new-session\", nil, msg)\n\tsrv.verifyProviderAttestation(p.ID, p, msg)\n\tp.Mu().Lock()\n\tdefer p.Mu().Unlock()\n\tif p.Reputation.TotalJobs != 0 || p.AccountID != \"\" {\n\t\tt.Fatalf(\"different SE key inherited state: reputation=%+v account=%q\", p.Reputation, p.AccountID)\n\t}\n}\n"
+      },
+      "capability": "linux",
+      "timeout_seconds": 600
+    },
+    {
+      "name": "coordinator",
+      "command": [
+        "go",
+        "test",
+        "-race",
+        "-json",
+        "./coordinator/...",
+        "-count=1"
+      ],
+      "required_tests": [
+        "github.com/eigeninference/d-inference/coordinator/store::TestPostgresProviderRecordStatsPersisted",
+        "github.com/eigeninference/d-inference/coordinator/store::TestProviderBySEKeyContract/memory",
+        "github.com/eigeninference/d-inference/coordinator/store::TestProviderBySEKeyContract/postgres",
+        "github.com/eigeninference/d-inference/coordinator/store::TestProviderBySEKeyExcludesRegisteringSession/memory",
+        "github.com/eigeninference/d-inference/coordinator/store::TestProviderBySEKeyExcludesRegisteringSession/postgres",
+        "github.com/eigeninference/d-inference/coordinator/store::TestProviderBySEKeyEqualTimestampsDeterministic/memory",
+        "github.com/eigeninference/d-inference/coordinator/store::TestProviderBySEKeyEqualTimestampsDeterministic/postgres",
+        "github.com/eigeninference/d-inference/coordinator/store::TestGetProviderBySEKeyReturnsDeepCopy",
+        "github.com/eigeninference/d-inference/coordinator/api::TestProviderReconnectRestoresMetadataAndReputationIndependently",
+        "github.com/eigeninference/d-inference/coordinator/api::TestFirstByteReachesClientWhileRegistryWriteLockHeld",
+        "github.com/eigeninference/d-inference/coordinator/api::TestServingSlotLatchDoesNotWaitOnRegistryWriteLock",
+        "github.com/eigeninference/d-inference/coordinator/api::TestNoteServingSlotForPrimaryNoRegistryLock",
+        "github.com/eigeninference/d-inference/coordinator/api::TestNoteServingSlotForBackupPointerNoRegistryLock",
+        "github.com/eigeninference/d-inference/coordinator/api::TestKVBackendAttributionPromotedLatchMismatchNoRegistryLock",
+        "github.com/eigeninference/d-inference/coordinator/api::TestKVBackendAttributionGenuineFaultLiveWinnerNoRegistryLock",
+        "github.com/eigeninference/d-inference/coordinator/api::TestFrozenTerminalAttributionSurvivesReLatchNoRegistryLock",
+        "github.com/eigeninference/d-inference/coordinator/api::TestServingSlotMissingOrMismatchedProviderNoRegistryLock/nil/latch",
+        "github.com/eigeninference/d-inference/coordinator/api::TestServingSlotMissingOrMismatchedProviderNoRegistryLock/nil/live",
+        "github.com/eigeninference/d-inference/coordinator/api::TestServingSlotMissingOrMismatchedProviderNoRegistryLock/mismatched/latch",
+        "github.com/eigeninference/d-inference/coordinator/api::TestServingSlotMissingOrMismatchedProviderNoRegistryLock/mismatched/live",
+        "github.com/eigeninference/d-inference/coordinator/protocol::FuzzInferenceErrorWireIsolation",
+        "github.com/eigeninference/d-inference/coordinator/api::TestFailoverProviderCleanupJoinsActiveScript",
+        "github.com/eigeninference/d-inference/coordinator/api::TestDeleteMyProvider_OnlineConflict409"
+      ],
+      "capability": "linux",
+      "timeout_seconds": 1800
+    },
+    {
+      "name": "docs",
+      "command": [
+        "make",
+        "docs-check"
+      ],
+      "capability": "linux",
+      "timeout_seconds": 180
+    },
+    {
+      "name": "wire-fuzz",
+      "command": [
+        "go",
+        "test",
+        "-json",
+        "./coordinator/protocol",
+        "-run",
+        "^FuzzInferenceErrorWireIsolation$",
+        "-fuzz",
+        "^FuzzInferenceErrorWireIsolation$",
+        "-fuzztime=5s"
+      ],
+      "required_tests": [
+        "github.com/eigeninference/d-inference/coordinator/protocol::FuzzInferenceErrorWireIsolation"
+      ],
+      "capability": "linux",
+      "timeout_seconds": 600
+    },
+    {
+      "name": "provider",
+      "command": [
+        "make",
+        "provider-test"
+      ],
+      "capability": "mac",
+      "timeout_seconds": 1800
+    }
+  ],
+  "ci_rules": [
+    {
+      "prefixes": [
+        "coordinator/promptsidecar/"
+      ],
+      "checks": [],
+      "capability": "rust"
+    },
+    {
+      "prefixes": [
+        "coordinator/",
+        "go.mod",
+        "go.sum"
+      ],
+      "checks": [
+        "coordinator"
+      ],
+      "capability": "linux"
+    },
+    {
+      "prefixes": [
+        "docs/",
+        "CHANGELOG",
+        "README",
+        ".forge/",
+        ".github/workflows/forge-ci.yml"
+      ],
+      "checks": [
+        "docs"
+      ],
+      "capability": "linux"
+    },
+    {
+      "prefixes": [
+        "provider-swift/",
+        "libs/",
+        "e2e/"
+      ],
+      "checks": [
+        "provider"
+      ],
+      "capability": "mac"
+    },
+    {
+      "prefixes": [
+        "console-ui/",
+        "admin-ui/",
+        "landing/"
+      ],
+      "checks": [],
+      "capability": "browser"
+    }
+  ]
+}

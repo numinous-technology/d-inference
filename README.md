@@ -1,5 +1,7 @@
 # Darkbloom
 
+> **Numinous Forge demonstration fork.** See [the engineering workflow and recorded examples](.forge/README.md). Upstream is [Layr-Labs/d-inference](https://github.com/Layr-Labs/d-inference).
+
 > **Public Alpha** — Darkbloom is a decentralized private-inference network for Apple Silicon. Expect rough edges, breaking changes, and downtime. Alpha pricing, the platform fee and payout rules are stated once, in [billing](docs/architecture/billing.md#invariants).
 
 Darkbloom turns idle Macs into a private, OpenAI-compatible inference cloud.

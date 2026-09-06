@@ -1,0 +1,232 @@
+{
+  "id": "66257843079c685ec7a310c33395c780",
+  "lane": "issue",
+  "state": "published",
+  "policy_digest": "6e7f097750c960348238b82c6517482d1698c8bb0785146572e36cae2ea127b8",
+  "created_at": "2026-09-05T22:37:22.999264869Z",
+  "updated_at": "2026-09-05T23:58:44.153890108Z",
+  "source": {
+    "repo": "https://github.com/Layr-Labs/d-inference.git",
+    "commit": "bbf6f83d4bbe66ae1a78c8f5cec898e3fbff5783"
+  },
+  "verified_tree": "d48f7ad10dae36a444610f59abca9c04d1b4862d",
+  "verification_run_ids": [
+    "e91b2033757f947a1bada3f051595966",
+    "99250d1942a1c89a834647def5c64341",
+    "88768ed2c0a93307867b7b43f9e5492e"
+  ],
+  "publication": {
+    "repository": "numinous-technology/d-inference",
+    "branch": "forge/task-66257843079c685ec7a310c33395c780",
+    "commit": "c5bdd4230bebc58615b4160d5939e94033c5f358",
+    "pr_number": 4
+  },
+  "runs": [
+    {
+      "id": "f1286ab874e40ea0d37c9c6130460b0d",
+      "stage": "reproduce",
+      "attempt": 1,
+      "run_state": "failed",
+      "check": "reconnect",
+      "outcome": "failed",
+      "exit_code": 1,
+      "tree_sha": "def6c41e52e2fb06b8d528530f2f5849b59672cb",
+      "tree_after_sha": "def6c41e52e2fb06b8d528530f2f5849b59672cb",
+      "input_sha256": "1d7eb0e7d6c4a87231f23c47246556b8a9851cfc705b18e4d9de475f363b61fb",
+      "required_tests": {
+        "github.com/eigeninference/d-inference/coordinator/api::TestProviderReconnectRestoresReputationEarnedAfterStartup": "fail",
+        "github.com/eigeninference/d-inference/coordinator/api::TestProviderReconnectDoesNotRestoreAnotherSEKey": "fail"
+      },
+      "tests_completed": 4,
+      "elapsed_seconds": 61.116623640060425,
+      "source": {
+        "repo": "https://github.com/Layr-Labs/d-inference.git",
+        "commit": "bbf6f83d4bbe66ae1a78c8f5cec898e3fbff5783"
+      },
+      "result_sha256": "754c06bcfb864ee370130f16bde9ae813f6931ea4da36a9247b585575fefd6f9",
+      "result_collected": true,
+      "failed_tests": [
+        "github.com/eigeninference/d-inference/coordinator/api::TestProviderReconnectDoesNotRestoreAnotherSEKey",
+        "github.com/eigeninference/d-inference/coordinator/api::TestProviderReconnectRestoresReputationEarnedAfterStartup",
+        "github.com/eigeninference/d-inference/coordinator/api::TestProviderReconnectRestoresReputationEarnedAfterStartup/with_serial",
+        "github.com/eigeninference/d-inference/coordinator/api::TestProviderReconnectRestoresReputationEarnedAfterStartup/without_serial"
+      ]
+    },
+    {
+      "id": "2950efba148b4289601d960b702aa478",
+      "stage": "implement",
+      "attempt": 1,
+      "run_state": "succeeded",
+      "outcome": "candidate",
+      "tree_sha": "def6c41e52e2fb06b8d528530f2f5849b59672cb",
+      "input_sha256": "aa1f82b4dd7e07dc56e10b63469e9779ba0f1df8b41fc74c6c93b73af36dd864",
+      "elapsed_seconds": 948.3264977931976,
+      "model": "claude-opus-4-8",
+      "tool_executions": 56,
+      "source": {
+        "repo": "https://github.com/Layr-Labs/d-inference.git",
+        "commit": "bbf6f83d4bbe66ae1a78c8f5cec898e3fbff5783"
+      },
+      "result_sha256": "9f8549accdbcc812b98e9e4307f671c02aab83dea04d394eadc2cdd91a75c529",
+      "result_collected": true
+    },
+    {
+      "id": "07165f433fa1d14ca3794667bd12a751",
+      "stage": "verify",
+      "attempt": 1,
+      "run_state": "succeeded",
+      "check": "reconnect",
+      "outcome": "passed",
+      "exit_code": 0,
+      "tree_sha": "622f07b30b409bbad1be4b723f66a527407f55a9",
+      "tree_after_sha": "622f07b30b409bbad1be4b723f66a527407f55a9",
+      "input_sha256": "0732a6165aa22057a5760dd1d96fc9eefb469cd7b5c2a932c59a91942bd97fd0",
+      "required_tests": {
+        "github.com/eigeninference/d-inference/coordinator/api::TestProviderReconnectRestoresReputationEarnedAfterStartup": "pass",
+        "github.com/eigeninference/d-inference/coordinator/api::TestProviderReconnectDoesNotRestoreAnotherSEKey": "pass"
+      },
+      "tests_completed": 4,
+      "elapsed_seconds": 54.579750776290894,
+      "source": {
+        "repo": "https://github.com/Layr-Labs/d-inference.git",
+        "commit": "bbf6f83d4bbe66ae1a78c8f5cec898e3fbff5783"
+      },
+      "result_sha256": "70990342a8267b91e73068ac54a985c28966175c38b8818c9e6008f409fe125b",
+      "result_collected": true
+    },
+    {
+      "id": "a9f7b0883a318afe072b4f331fdee8b3",
+      "stage": "verify",
+      "attempt": 1,
+      "run_state": "succeeded",
+      "check": "coordinator",
+      "outcome": "passed",
+      "exit_code": 0,
+      "tree_sha": "622f07b30b409bbad1be4b723f66a527407f55a9",
+      "tree_after_sha": "622f07b30b409bbad1be4b723f66a527407f55a9",
+      "input_sha256": "10effc5587f45a6e533dc6f52b7b49cf6a1b392ab7078a680ac0e92d03a73d6e",
+      "required_tests": {
+        "github.com/eigeninference/d-inference/coordinator/store::TestPostgresProviderRecordStatsPersisted": "pass"
+      },
+      "tests_completed": 3992,
+      "elapsed_seconds": 268.6709249019623,
+      "source": {
+        "repo": "https://github.com/Layr-Labs/d-inference.git",
+        "commit": "bbf6f83d4bbe66ae1a78c8f5cec898e3fbff5783"
+      },
+      "result_sha256": "9ac3dc7de29fc2632765696817d24ec07a44d094fb4aa00e6d89e0af8ece1a34",
+      "result_collected": true
+    },
+    {
+      "id": "93d8cb64b25ad6da6f602eba84ae9c7f",
+      "stage": "verify",
+      "attempt": 1,
+      "run_state": "succeeded",
+      "check": "docs",
+      "outcome": "passed",
+      "exit_code": 0,
+      "tree_sha": "622f07b30b409bbad1be4b723f66a527407f55a9",
+      "tree_after_sha": "622f07b30b409bbad1be4b723f66a527407f55a9",
+      "input_sha256": "1bc27795eca30aff6689e83aa52928fe413094e76fe7febc15dc0b472d00d3c9",
+      "required_tests": {},
+      "tests_completed": 0,
+      "elapsed_seconds": 4.031873941421509,
+      "source": {
+        "repo": "https://github.com/Layr-Labs/d-inference.git",
+        "commit": "bbf6f83d4bbe66ae1a78c8f5cec898e3fbff5783"
+      },
+      "result_sha256": "0e0afd3090973fc965be1f1fdc30f2c434251be08a252f4f5fb783230e96c4cb",
+      "result_collected": true
+    },
+    {
+      "id": "e22dde1284bf60b5d60f747ddebcb6fa",
+      "stage": "implement",
+      "attempt": 2,
+      "run_state": "succeeded",
+      "outcome": "candidate",
+      "tree_sha": "622f07b30b409bbad1be4b723f66a527407f55a9",
+      "input_sha256": "45dbdfa628dda76b835db0dde13d2acbc964f2ec7ed1ef6edede6bb81ad087f1",
+      "elapsed_seconds": 1043.1946561336517,
+      "model": "claude-opus-4-8",
+      "tool_executions": 72,
+      "source": {
+        "repo": "https://github.com/Layr-Labs/d-inference.git",
+        "commit": "bbf6f83d4bbe66ae1a78c8f5cec898e3fbff5783"
+      },
+      "result_sha256": "a005f45b3f7ec7448a77dabddbfe394ea9594f4a29ebede6e43f8b7581d1c7d7",
+      "result_collected": true
+    },
+    {
+      "id": "e91b2033757f947a1bada3f051595966",
+      "stage": "verify",
+      "attempt": 2,
+      "run_state": "succeeded",
+      "check": "reconnect",
+      "outcome": "passed",
+      "exit_code": 0,
+      "tree_sha": "d48f7ad10dae36a444610f59abca9c04d1b4862d",
+      "tree_after_sha": "d48f7ad10dae36a444610f59abca9c04d1b4862d",
+      "input_sha256": "f4701414d7285b64ee5f062e3988c0f6dbab8d8030d6f8c0d9e5479e4d311677",
+      "required_tests": {
+        "github.com/eigeninference/d-inference/coordinator/api::TestProviderReconnectRestoresReputationEarnedAfterStartup": "pass",
+        "github.com/eigeninference/d-inference/coordinator/api::TestProviderReconnectDoesNotRestoreAnotherSEKey": "pass"
+      },
+      "tests_completed": 4,
+      "elapsed_seconds": 59.69235420227051,
+      "source": {
+        "repo": "https://github.com/Layr-Labs/d-inference.git",
+        "commit": "bbf6f83d4bbe66ae1a78c8f5cec898e3fbff5783"
+      },
+      "result_sha256": "7b7bebb6e8668568ced12926b2da30bfd6fc543cd7f04e8859c044d0ffd6d559",
+      "result_collected": true
+    },
+    {
+      "id": "99250d1942a1c89a834647def5c64341",
+      "stage": "verify",
+      "attempt": 2,
+      "run_state": "succeeded",
+      "check": "coordinator",
+      "outcome": "passed",
+      "exit_code": 0,
+      "tree_sha": "d48f7ad10dae36a444610f59abca9c04d1b4862d",
+      "tree_after_sha": "d48f7ad10dae36a444610f59abca9c04d1b4862d",
+      "input_sha256": "545eacd7a08ff22e208d6e51906bc264ce5a91b08b62f300b2e2eb12f27a8829",
+      "required_tests": {
+        "github.com/eigeninference/d-inference/coordinator/store::TestPostgresProviderRecordStatsPersisted": "pass"
+      },
+      "tests_completed": 4003,
+      "elapsed_seconds": 252.18982577323914,
+      "source": {
+        "repo": "https://github.com/Layr-Labs/d-inference.git",
+        "commit": "bbf6f83d4bbe66ae1a78c8f5cec898e3fbff5783"
+      },
+      "result_sha256": "7cc06700896048f4d28a22fc754bc8f1a4f0ca57c313eb29d537ffd4d58150d0",
+      "result_collected": true
+    },
+    {
+      "id": "88768ed2c0a93307867b7b43f9e5492e",
+      "stage": "verify",
+      "attempt": 2,
+      "run_state": "succeeded",
+      "check": "docs",
+      "outcome": "passed",
+      "exit_code": 0,
+      "tree_sha": "d48f7ad10dae36a444610f59abca9c04d1b4862d",
+      "tree_after_sha": "d48f7ad10dae36a444610f59abca9c04d1b4862d",
+      "input_sha256": "ebd09f40d8912829bbd255739c306f860c2bbcc7a02255a11010a1fcb3ae39b5",
+      "required_tests": {},
+      "tests_completed": 0,
+      "elapsed_seconds": 4.050065755844116,
+      "source": {
+        "repo": "https://github.com/Layr-Labs/d-inference.git",
+        "commit": "bbf6f83d4bbe66ae1a78c8f5cec898e3fbff5783"
+      },
+      "result_sha256": "1ccc56c5f1b5effb7938058abc1fa791bf5407d359ffed3af4d2feafcb282407",
+      "result_collected": true
+    }
+  ],
+  "notes_recorded": 6,
+  "events_recorded": 18,
+  "distinct_worker_count": 9,
+  "verification_tree_consistent": true
+}
