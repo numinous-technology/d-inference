@@ -16,7 +16,7 @@ flowchart TB
     People[Maintainers and contributors] --> Request[Issue or requested improvement]
     People --> PR[Pull request]
     Clock[Configured schedule] --> Checks
-    Request --> Work[Pi implementation worker]
+    Request --> Work[Implementation worker]
     Work --> Checks[Fresh verification workers]
     PR --> Checks
     Checks --> Evidence[Tests, patch, source identity and task history]
@@ -41,7 +41,7 @@ The [accepted policy snapshot](policy/darkbloom.json) lists profiles and require
 
 ## Inspect the evidence
 
-[Infrastructure qualification](evidence/qualification.json) records the tested build and deployment scope. [Qualification history](evidence/qualification-attempts.json) retains failed attempts and their corrections. [Repair PR CI](evidence/issue-ci-task.json) and [prompted PR CI](evidence/prompted-ci-task.json) record verification of each PR's merge with the target branch.
+[Repair PR CI](evidence/issue-ci-task.json) and [prompted PR CI](evidence/prompted-ci-task.json) record verification of each PR's merge with the target branch.
 
 With operator access to the installed CLI:
 
@@ -52,10 +52,8 @@ numinous-forge task export 66257843079c685ec7a310c33395c780 ./repair-evidence
 numinous-forge schedule runs qualification-protocol
 ```
 
-Public receipts omit credentials and private infrastructure details. Operator exports contain the complete input, review notes, attempts, logs, and artifact manifests. The platform source is [Numinous Forge](https://github.com/numinous-technology/numinous-forge), currently private.
+Public receipts omit credentials and private infrastructure details. Operator exports contain the complete input, review notes, attempts, logs, and artifact manifests.
 
-## Deployment boundary
+## Demonstrated work
 
-This deployment covers one project and two concurrent Linux workers. Native Mac/provider, Rust sidecar, and browser-specific coverage are unavailable and block affected CI work. Slack is not installed. Schedules use explicitly pinned commits. The controller is a single instance; durable state and evidence live in Aurora and S3.
-
-GitHub Actions submits work through a restricted AWS OIDC role; candidate code receives no GitHub or AWS account credentials. Verification uses accepted policy and the pinned PR merge. Inherited upstream deployment and release workflows are disabled in this fork. This demonstration does not claim that all upstream issues are fixed or that unsupported environments were tested.
+The examples cover coordinator and protocol improvements in this fork. Each linked result records the checks that ran and the revision they verified. Maintainers review the proposed behavior and decide what to merge.

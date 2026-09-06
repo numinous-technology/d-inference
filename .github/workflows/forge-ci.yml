@@ -13,7 +13,7 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: write
   statuses: write
   id-token: write
 
@@ -35,6 +35,7 @@ jobs:
           role-duration-seconds: 3600
           allowed-account-ids: '339712930505'
       - name: Run trusted Forge client
+        id: forge
         env:
           GH_TOKEN: ${{ github.token }}
           FORGE_FUNCTION: ${{ vars.FORGE_FUNCTION }}
@@ -55,18 +56,152 @@ jobs:
           import sys
           import urllib.request
 
+          import time
+
+          """Public GitHub progress summaries. Never publish raw task reasons or artifacts."""
+          from datetime import datetime, timezone
+          import json
+          import os
+          import re
+          import urllib.error
+          import urllib.request
+
           REPOSITORY = "numinous-technology/d-inference"
+          SHA = re.compile(r"[a-f0-9]{40}")
+          TASK_ID = re.compile(r"[a-f0-9]{32}")
+          TERMINAL = {"verified", "published", "blocked", "cancelled", "failed", "timed_out"}
+          CHECKS = {"protocol": "Protocol", "coordinator": "Coordinator", "docs": "Documentation",
+                    "reconnect": "Reconnect regression", "provider": "Provider"}
+          STATES = {
+              "queued": ("Queued", "Waiting to start."),
+              "reproducing": ("Reproducing the issue", "Checking the reported failure before changing code."),
+              "implementing": ("Agent working", "Preparing a proposed change. It has not passed verification yet."),
+              "verifying": ("Verification in progress", "Running the accepted checks in a separate environment."),
+              "verified": ("Verification passed", "The accepted checks passed. Ready for human review."),
+              "published": ("Change published", "The independently verified candidate is available for review. PR CI is reported separately."),
+              "blocked": ("Needs attention", "Verification could not complete successfully. Inspect the linked run before proceeding."),
+              "failed": ("Failed", "The task did not complete successfully."),
+              "timed_out": ("Timed out", "The task exceeded its deadline."),
+              "cancelling": ("Stopping", "Cancellation is in progress."),
+              "cancelled": ("Cancelled", "The task was cancelled."),
+              "superseded": ("New commits need verification", "This result belongs to an older revision. Wait for the check on the latest commit."),
+              "interrupted": ("Updates interrupted", "This reporter stopped before confirming a result. Check the workflow; the task may still be running."),
+              "error": ("Could not complete verification", "Open the workflow for details. No passing result was recorded."),
+          }
 
 
-          def github(path, body=None):
+          def github(path, body=None, method=None):
               request = urllib.request.Request(
                   "https://api.github.com/repos/" + REPOSITORY + path,
-                  data=None if body is None else json.dumps(body).encode(),
+                  data=None if body is None else json.dumps(body).encode(), method=method,
                   headers={"Authorization": "Bearer " + os.environ["GH_TOKEN"],
                            "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"},
               )
               with urllib.request.urlopen(request, timeout=30) as response:
                   return json.load(response)
+
+
+          def valid_task(task, head, task_id=None):
+              return (isinstance(task, dict) and TASK_ID.fullmatch(task.get("id", "")) is not None
+                      and task.get("lane") == "ci"
+                      and (task_id is None or task["id"] == task_id)
+                      and task.get("source") == {"repo": "https://github.com/" + REPOSITORY + ".git", "commit": head})
+
+
+          def summary(task, state=None):
+              state = state or task.get("state", "queued")
+              if state not in STATES:
+                  raise ValueError("unknown task state")
+              title, detail = STATES[state]
+              reason = task.get("reason", "")
+              if state == "blocked":
+                  match = re.fullmatch(r"verification failed: ([a-zA-Z0-9_-]+) \([a-f0-9]{32}\)", reason)
+                  if match and match[1] in CHECKS:
+                      title, detail = "Checks failed", f"{CHECKS[match[1]]} did not pass. Open the run to inspect the failure."
+                  elif reason.startswith(("unsupported capability ", "no accepted CI coverage for ")):
+                      title, detail = "Coverage needed", "The changed files need checks that are not configured. This PR has not passed verification."
+                  elif reason.startswith("CI revision no longer current:"):
+                      title, detail = STATES["superseded"]
+              lines = [f"**{title}**", "", detail]
+              if task.get("lane") == "ci":
+                  lines += ["", "This run checks the PR; it does not modify code."]
+              attempts = task.get("attempts") or []
+              round_number = task.get("verification_round", 0)
+              checks = []
+              for attempt in attempts:
+                  if attempt.get("stage") == "verify" and attempt.get("number") == round_number:
+                      name = CHECKS.get(attempt.get("check"))
+                      if name and name not in checks:
+                          checks.append(name)
+              if checks:
+                  label = "Checks passed" if state in {"verified", "published"} else "Checks reached"
+                  lines += ["", f"{label}: " + ", ".join(checks) + "."]
+              if state == "implementing" and task.get("agent_attempts", 0) > 1:
+                  lines += ["", "The agent is revising its earlier candidate."]
+              return "\n".join(lines)
+
+
+          class ProgressComment:
+              def __init__(self, pr, head, run_url, *, slot="ci", author="github-actions[bot]", api=github):
+                  if type(pr) is not int or pr < 1 or not SHA.fullmatch(head):
+                      raise ValueError("invalid PR or source SHA")
+                  if slot != "ci" and not TASK_ID.fullmatch(slot):
+                      raise ValueError("invalid comment slot")
+                  if not re.fullmatch(r"https://github.com/numinous-technology/d-inference/(actions/runs/[0-9]+|pull/[0-9]+)", run_url):
+                      raise ValueError("invalid progress link")
+                  self.pr, self.head, self.url = pr, head, run_url
+                  self.slot, self.author, self.api = slot, author, api
+                  self.marker = f"<!-- numinous-forge:{slot} -->"
+                  self.last_body = None
+
+              def find(self):
+                  for page in range(1, 101):
+                      comments = self.api(f"/issues/{self.pr}/comments?per_page=100&page={page}")
+                      for comment in comments:
+                          if comment.get("user", {}).get("login") == self.author and comment.get("body", "").startswith(self.marker + "\n"):
+                              return comment
+                      if len(comments) < 100:
+                          return None
+                  raise ValueError("comment history exceeds supported pagination")
+
+              def write(self, task, state=None, *, owned_only=False):
+                  current = self.api(f"/pulls/{self.pr}")
+                  same_head = current["head"]["sha"] == self.head
+                  if not same_head:
+                      state = "superseded"
+                  existing = self.find()
+                  ownership = f"<!-- run:{self.url} head:{self.head} -->"
+                  if existing and ownership not in existing["body"] and (owned_only or not same_head):
+                      return False
+                  if owned_only and not existing:
+                      return False
+                  # A stale event must never create a new comment after a newer commit arrives.
+                  if not existing and not same_head:
+                      return False
+                  label = "PR verification" if self.slot == "ci" else "Engineering task"
+                  effective_state = state or task.get("state", "queued")
+                  content = f"{self.marker}\n{ownership}\n<!-- state:{effective_state} -->\n### Numinous Forge · {label}\n\n" + summary(task, state)
+                  content += f"\n\nRevision: [`{self.head[:12]}`](https://github.com/{REPOSITORY}/commit/{self.head})."
+                  source = task.get("verification_source", {}).get("commit", "")
+                  if SHA.fullmatch(source):
+                      content += f" Tested merge: `{source[:12]}`."
+                  link_label = "Open workflow and results" if "/actions/runs/" in self.url else "Open pull request"
+                  content += f"\n\n[{link_label}]({self.url})"
+                  task_id = task.get("id", "")
+                  if TASK_ID.fullmatch(task_id):
+                      content += f" · Task `{task_id}`"
+                  # Deduplicate state polls; timestamps advance only when the public state changes.
+                  if content == self.last_body:
+                      return same_head
+                  stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+                  body = content + f"\n\n_Last observed {stamp}. This comment updates as work progresses._"
+                  if existing:
+                      self.api(f"/issues/comments/{existing['id']}", {"body": body}, method="PATCH")
+                  else:
+                      self.api(f"/issues/{self.pr}/comments", {"body": body})
+                  self.last_body = content
+                  return same_head
+
 
 
           def target(event, event_name):
@@ -122,28 +257,237 @@ jobs:
               def status(state, description):
                   github("/statuses/" + head, {"state": state, "context": status_context, "description": description, "target_url": url})
 
-              status("pending", "Isolated verification queued in Numinous Forge")
+              reporter = ProgressComment(pr, head, url, api=github) if pr else None
+              task = {"lane": "ci", "state": "queued"}
+              status("pending", "Verification queued in Numinous Forge")
               try:
-                  args = [str(executable), "ci", "--repo", REPOSITORY, "--head", head, "--wait", "--key", "github:" + os.environ["GITHUB_RUN_ID"] + ":" + os.environ.get("GITHUB_RUN_ATTEMPT", "1")]
+                  if reporter:
+                      reporter.write(task)
+                  args = [str(executable), "ci", "--repo", REPOSITORY, "--head", head, "--key", "github:" + os.environ["GITHUB_RUN_ID"] + ":" + os.environ.get("GITHUB_RUN_ATTEMPT", "1")]
                   if pr:
                       args += ["--pr", str(pr)]
-                  result = subprocess.run(args, stdout=subprocess.PIPE, text=True, timeout=3000)
-                  Path("forge-task.json").write_text(result.stdout)
-                  print(result.stdout)
+                  deadline = time.monotonic() + 2700
+                  result = subprocess.run(args, stdout=subprocess.PIPE, text=True, stderr=subprocess.PIPE, timeout=180, check=True)
                   task = json.loads(result.stdout)
-                  passed = result.returncode == 0 and verified(task, head)
+                  if not valid_task(task, head):
+                      raise ValueError("task identity differs from requested CI source")
+                  task_id = task["id"]
+                  while True:
+                      Path("forge-task.json").write_text(json.dumps(task))
+                      if task.get("state") == "verified" and not verified(task, head):
+                          raise ValueError("verified task lacks required evidence")
+                      if reporter and not reporter.write(task):
+                          status("error", "Superseded by a newer PR head; verify the latest commit")
+                          return 1
+                      if task.get("state") in TERMINAL:
+                          break
+                      if task.get("state") not in {"queued", "verifying", "cancelling"}:
+                          raise ValueError("unexpected CI state")
+                      if time.monotonic() >= deadline:
+                          raise TimeoutError("CI progress deadline exceeded")
+                      time.sleep(15)
+                      result = subprocess.run([str(executable), "task", "get", task_id], stdout=subprocess.PIPE, text=True, stderr=subprocess.PIPE, timeout=120, check=True)
+                      task = json.loads(result.stdout)
+                      if not valid_task(task, head, task_id):
+                          raise ValueError("task identity changed during polling")
+                  passed = verified(task, head)
                   if pr and github(f"/pulls/{pr}")["head"]["sha"] != head:
+                      if reporter:
+                          reporter.write(task, "superseded")
                       status("error", "Superseded by a newer PR head; this result is for the old commit")
                       return 1
-                  status("success" if passed else "failure", "Required checks passed on isolated workers" if passed else "Verification did not pass; see this workflow run")
-                  with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
-                      summary.write(f"### Numinous Forge verification\n\nCommit: `{head}`\n\nResult: {'passed' if passed else 'failed'}\n\n")
-                      summary.write("The workflow log contains the task ID, verification run IDs, and policy digest.\n")
+                  status("success" if passed else "failure", "Required checks passed" if passed else "Verification did not pass; see the Forge comment")
+                  print(json.dumps({key: task[key] for key in ("id", "state", "source", "verification_run_ids", "policy_digest") if key in task}))
+                  with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as output:
+                      output.write(f"### Numinous Forge verification\n\nCommit: `{head}`\n\nResult: {'passed' if passed else 'failed'}\n\n")
+                      output.write(f"Task: `{task_id}`. Verification runs and policy identity are in the workflow log.\n")
                   return 0 if passed else 1
               except Exception:
                   status("error", "Forge could not complete verification; inspect the workflow log")
+                  if reporter:
+                      reporter.write(task, "error", owned_only=True)
                   raise
 
 
           if __name__ == "__main__":
               sys.exit(main())
+      - name: Finalize interrupted progress
+        if: ${{ always() && steps.forge.outcome != 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: python
+        run: |
+          """Close an interrupted progress report when the Actions job can still finalize."""
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import sys
+
+          """Public GitHub progress summaries. Never publish raw task reasons or artifacts."""
+          from datetime import datetime, timezone
+          import json
+          import os
+          import re
+          import urllib.error
+          import urllib.request
+
+          REPOSITORY = "numinous-technology/d-inference"
+          SHA = re.compile(r"[a-f0-9]{40}")
+          TASK_ID = re.compile(r"[a-f0-9]{32}")
+          TERMINAL = {"verified", "published", "blocked", "cancelled", "failed", "timed_out"}
+          CHECKS = {"protocol": "Protocol", "coordinator": "Coordinator", "docs": "Documentation",
+                    "reconnect": "Reconnect regression", "provider": "Provider"}
+          STATES = {
+              "queued": ("Queued", "Waiting to start."),
+              "reproducing": ("Reproducing the issue", "Checking the reported failure before changing code."),
+              "implementing": ("Agent working", "Preparing a proposed change. It has not passed verification yet."),
+              "verifying": ("Verification in progress", "Running the accepted checks in a separate environment."),
+              "verified": ("Verification passed", "The accepted checks passed. Ready for human review."),
+              "published": ("Change published", "The independently verified candidate is available for review. PR CI is reported separately."),
+              "blocked": ("Needs attention", "Verification could not complete successfully. Inspect the linked run before proceeding."),
+              "failed": ("Failed", "The task did not complete successfully."),
+              "timed_out": ("Timed out", "The task exceeded its deadline."),
+              "cancelling": ("Stopping", "Cancellation is in progress."),
+              "cancelled": ("Cancelled", "The task was cancelled."),
+              "superseded": ("New commits need verification", "This result belongs to an older revision. Wait for the check on the latest commit."),
+              "interrupted": ("Updates interrupted", "This reporter stopped before confirming a result. Check the workflow; the task may still be running."),
+              "error": ("Could not complete verification", "Open the workflow for details. No passing result was recorded."),
+          }
+
+
+          def github(path, body=None, method=None):
+              request = urllib.request.Request(
+                  "https://api.github.com/repos/" + REPOSITORY + path,
+                  data=None if body is None else json.dumps(body).encode(), method=method,
+                  headers={"Authorization": "Bearer " + os.environ["GH_TOKEN"],
+                           "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"},
+              )
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  return json.load(response)
+
+
+          def valid_task(task, head, task_id=None):
+              return (isinstance(task, dict) and TASK_ID.fullmatch(task.get("id", "")) is not None
+                      and task.get("lane") == "ci"
+                      and (task_id is None or task["id"] == task_id)
+                      and task.get("source") == {"repo": "https://github.com/" + REPOSITORY + ".git", "commit": head})
+
+
+          def summary(task, state=None):
+              state = state or task.get("state", "queued")
+              if state not in STATES:
+                  raise ValueError("unknown task state")
+              title, detail = STATES[state]
+              reason = task.get("reason", "")
+              if state == "blocked":
+                  match = re.fullmatch(r"verification failed: ([a-zA-Z0-9_-]+) \([a-f0-9]{32}\)", reason)
+                  if match and match[1] in CHECKS:
+                      title, detail = "Checks failed", f"{CHECKS[match[1]]} did not pass. Open the run to inspect the failure."
+                  elif reason.startswith(("unsupported capability ", "no accepted CI coverage for ")):
+                      title, detail = "Coverage needed", "The changed files need checks that are not configured. This PR has not passed verification."
+                  elif reason.startswith("CI revision no longer current:"):
+                      title, detail = STATES["superseded"]
+              lines = [f"**{title}**", "", detail]
+              if task.get("lane") == "ci":
+                  lines += ["", "This run checks the PR; it does not modify code."]
+              attempts = task.get("attempts") or []
+              round_number = task.get("verification_round", 0)
+              checks = []
+              for attempt in attempts:
+                  if attempt.get("stage") == "verify" and attempt.get("number") == round_number:
+                      name = CHECKS.get(attempt.get("check"))
+                      if name and name not in checks:
+                          checks.append(name)
+              if checks:
+                  label = "Checks passed" if state in {"verified", "published"} else "Checks reached"
+                  lines += ["", f"{label}: " + ", ".join(checks) + "."]
+              if state == "implementing" and task.get("agent_attempts", 0) > 1:
+                  lines += ["", "The agent is revising its earlier candidate."]
+              return "\n".join(lines)
+
+
+          class ProgressComment:
+              def __init__(self, pr, head, run_url, *, slot="ci", author="github-actions[bot]", api=github):
+                  if type(pr) is not int or pr < 1 or not SHA.fullmatch(head):
+                      raise ValueError("invalid PR or source SHA")
+                  if slot != "ci" and not TASK_ID.fullmatch(slot):
+                      raise ValueError("invalid comment slot")
+                  if not re.fullmatch(r"https://github.com/numinous-technology/d-inference/(actions/runs/[0-9]+|pull/[0-9]+)", run_url):
+                      raise ValueError("invalid progress link")
+                  self.pr, self.head, self.url = pr, head, run_url
+                  self.slot, self.author, self.api = slot, author, api
+                  self.marker = f"<!-- numinous-forge:{slot} -->"
+                  self.last_body = None
+
+              def find(self):
+                  for page in range(1, 101):
+                      comments = self.api(f"/issues/{self.pr}/comments?per_page=100&page={page}")
+                      for comment in comments:
+                          if comment.get("user", {}).get("login") == self.author and comment.get("body", "").startswith(self.marker + "\n"):
+                              return comment
+                      if len(comments) < 100:
+                          return None
+                  raise ValueError("comment history exceeds supported pagination")
+
+              def write(self, task, state=None, *, owned_only=False):
+                  current = self.api(f"/pulls/{self.pr}")
+                  same_head = current["head"]["sha"] == self.head
+                  if not same_head:
+                      state = "superseded"
+                  existing = self.find()
+                  ownership = f"<!-- run:{self.url} head:{self.head} -->"
+                  if existing and ownership not in existing["body"] and (owned_only or not same_head):
+                      return False
+                  if owned_only and not existing:
+                      return False
+                  # A stale event must never create a new comment after a newer commit arrives.
+                  if not existing and not same_head:
+                      return False
+                  label = "PR verification" if self.slot == "ci" else "Engineering task"
+                  effective_state = state or task.get("state", "queued")
+                  content = f"{self.marker}\n{ownership}\n<!-- state:{effective_state} -->\n### Numinous Forge · {label}\n\n" + summary(task, state)
+                  content += f"\n\nRevision: [`{self.head[:12]}`](https://github.com/{REPOSITORY}/commit/{self.head})."
+                  source = task.get("verification_source", {}).get("commit", "")
+                  if SHA.fullmatch(source):
+                      content += f" Tested merge: `{source[:12]}`."
+                  link_label = "Open workflow and results" if "/actions/runs/" in self.url else "Open pull request"
+                  content += f"\n\n[{link_label}]({self.url})"
+                  task_id = task.get("id", "")
+                  if TASK_ID.fullmatch(task_id):
+                      content += f" · Task `{task_id}`"
+                  # Deduplicate state polls; timestamps advance only when the public state changes.
+                  if content == self.last_body:
+                      return same_head
+                  stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+                  body = content + f"\n\n_Last observed {stamp}. This comment updates as work progresses._"
+                  if existing:
+                      self.api(f"/issues/comments/{existing['id']}", {"body": body}, method="PATCH")
+                  else:
+                      self.api(f"/issues/{self.pr}/comments", {"body": body})
+                  self.last_body = content
+                  return same_head
+
+
+
+          def main():
+              if os.environ["GITHUB_REPOSITORY"] != REPOSITORY or os.environ["GITHUB_REF"] != "refs/heads/master":
+                  raise ValueError("untrusted workflow context")
+              if os.environ["GITHUB_EVENT_NAME"] != "pull_request_target":
+                  return
+              event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
+              head, pr = event["pull_request"]["head"]["sha"], event["number"]
+              url = f"https://github.com/{REPOSITORY}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+              reporter = ProgressComment(pr, head, url, api=github)
+              existing = reporter.find()
+              if existing and f"<!-- run:{url} head:{head} -->" not in existing["body"]:
+                  return
+              if existing and re.search(r"<!-- state:(verified|blocked|cancelled|failed|timed_out|superseded|error) -->", existing["body"]):
+                  return
+              reporter.write({"lane": "ci"}, "interrupted")
+              github("/statuses/" + head, {"state": "error", "context": "Numinous Forge / verification",
+                                         "description": "Verification reporting was interrupted; inspect the workflow", "target_url": url})
+
+
+          if __name__ == "__main__":
+              main()
