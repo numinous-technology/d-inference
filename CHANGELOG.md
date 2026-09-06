@@ -4,6 +4,10 @@
 
 - Restore a reconnecting provider's reputation and account linkage from a live store lookup keyed to the attested Secure Enclave public key, excluding the registering session's own row, so a restart, lid-close, or reconnect no longer resets standing to the 0.60 cold-start default. Device metadata comes from the newest row and reputation from the newest row that earned it, with a deterministic `last_seen`/`id` tie-break shared by the memory and PostgreSQL stores. Hardware trust is still re-earned live on every connection.
 
+## Unreleased — first-byte serving-slot latch
+
+- Resolve the dispatched slot's KV-backend attribution from the provider the dispatch goroutine already holds, on every path that runs between provider handoff and the first client byte: the primary handoff latch, the speculative backup-pointer re-latch, and the promoted-winner / latch-mismatch and genuine-fault live-winner reads before the committed response. None of these take the registry read lock any more, so a concurrent registry write lock can no longer stall the first byte. Preserve the model/provider/slot attribution, frozen terminal (genuine-fault) attribution, exactly-once accounting, reservations, and failover/retry/speculative behavior; a provider mismatch resolves to unknown rather than borrowing another slot's tag or reaching for the registry lock.
+
 ## Unreleased — provider console entry
 
 - Open the provider workspace directly from the console home page, removing the Consumer/Provider selection page. Keep chat and API access in workspace navigation.

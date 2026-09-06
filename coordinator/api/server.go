@@ -229,6 +229,7 @@ type Server struct {
 	codeResumeSender              func(string, protocol.CodeAttestationResumeChallenge) error
 	codeResumeBeforeIdentityCheck func()              // test seam between cache match and challenge record
 	codeResumeFallbackBeforeAPNs  func()              // test seam after nonce consume, before ctx recheck
+	beforeServingSlotAttribution  func()              // test seam after provider handoff, before serving-slot KV latch (first-byte lock regression)
 	codeAttestThrottle            *codeAttestThrottle // per-device APNs push budget + reuse cache (v0.6.0)
 	trustReuseCache               *trustReuseCache    // per-device trust-reuse cache: skip a fleet-wide live MDM herd on restart (DAR-326)
 	trustReuseJournal             hardUntrustJournal

@@ -191,39 +191,33 @@ func usableMetricSample(v float64) bool {
 // the half of Gate G5 that catches a paged regression — would all land in
 // kv_backend:unknown.
 func (d *dispatchState) noteServingSlot() {
-	d.noteServingSlotFor(d.pr)
+	d.noteServingSlotFor(d.provider, d.pr)
 }
 
-// noteServingSlotFor re-latches the attribution to an explicit pending request.
-// The speculative race paths need this: the backup is dispatched by
-// dispatchOneProvider (not the noteServingSlot choke point), so once the
-// PRIMARY has failed and the backup becomes the racer of record — or wins the
-// race outright — the latch must follow it. Otherwise a backup failure that
-// turns terminal after the race helpers clear d.pr would book under the
-// PRIMARY's kv_backend tag, misattributing exactly the 5xx/timeout population
-// Gate G5 segments per backend in a mixed-backend fleet. The invariant the
-// re-latch sites maintain: the latch always names the slot whose failure would
-// be the terminal one — the last slot still racing.
-//
-// EXCEPTION — a latched terminal verdict freezes the ordinary latch. This
-// includes deterministic client/unservable verdicts and a genuine fault
-// snapshot. Re-latching to a later neutral racer would book the controlling
-// terminal under the wrong backend. Genuine faults carry their own immutable
-// dispatchSlotAttribution and may replace one another atomically. A backup that
-// goes on to WIN is unaffected: commit-path reads go through the live d.pr (see
-// kvBackendAttribution), not the terminal snapshot.
-func (d *dispatchState) noteServingSlotFor(pr *registry.PendingRequest) {
+// noteServingSlotFor follows the request's retained provider, including explicit
+// backup promotion, without acquiring the global registry lock before first byte.
+// Missing or mismatched providers resolve to unknown rather than another slot.
+// A terminal verdict freezes the latch; live winners resolve independently.
+func (d *dispatchState) noteServingSlotFor(provider *registry.Provider, pr *registry.PendingRequest) {
 	if pr == nil || pr.ProviderID == "" {
 		return
 	}
 	if d.attributionLatchFrozen() {
 		return
 	}
-	d.servedKVSlot = dispatchSlotAttribution{
-		providerID: pr.ProviderID,
-		model:      pr.Model,
-		backend:    d.s.kvBackendAttribution(pr.ProviderID, pr.Model),
+	if provider != nil && provider.ID != pr.ProviderID {
+		provider = nil
 	}
+	d.servedKVSlot = d.providerSlotAttribution(provider, pr.Model)
+}
+
+// liveSlotBackend resolves a live winner from its matching retained provider.
+// It must not acquire the global registry lock before the committed response.
+func (d *dispatchState) liveSlotBackend(pr *registry.PendingRequest) kvBackendAttribution {
+	if pr == nil || d.provider == nil || d.provider.ID != pr.ProviderID {
+		return newUnknownKVBackendAttribution()
+	}
+	return d.s.providerKVBackendAttribution(d.provider, pr.Model)
 }
 
 // attributionLatchFrozen reports whether a terminal verdict has latched — from
@@ -269,13 +263,13 @@ func (d *dispatchState) kvBackendAttribution() kvBackendAttribution {
 			// A sticky speculative loser must not contaminate a survivor that
 			// produces content. Live content always names its own serving slot;
 			// the terminal snapshot is consulted only after no live winner remains.
-			return d.s.kvBackendAttribution(pr.ProviderID, pr.Model)
+			return d.liveSlotBackend(pr)
 		}
 		if pr.ProviderID == d.servedKVSlot.providerID &&
 			pr.Model == d.servedKVSlot.model {
 			return d.servedKVSlot.backend
 		}
-		att := d.s.kvBackendAttribution(pr.ProviderID, pr.Model)
+		att := d.liveSlotBackend(pr)
 		if !d.attributionLatchFrozen() {
 			d.servedKVSlot = dispatchSlotAttribution{
 				providerID: pr.ProviderID,

@@ -269,9 +269,10 @@ func TestRequestOutcomeSegmentsByServingSlotBackend(t *testing.T) {
 	for _, row := range fleet {
 		p := registerHeartbeatedProvider(t, srv, row.providerID, row.model, row.backend)
 		d := &dispatchState{
-			s:     srv,
-			model: row.model,
-			pr:    &registry.PendingRequest{RequestID: "req-" + row.providerID, ProviderID: p.ID, Model: row.model},
+			s:        srv,
+			model:    row.model,
+			provider: p,
+			pr:       &registry.PendingRequest{RequestID: "req-" + row.providerID, ProviderID: p.ID, Model: row.model},
 		}
 		d.noteServingSlot()
 		// Every failover path clears these before the exhaustion ladder runs.
@@ -349,16 +350,19 @@ func TestDispatchKVBackendTagFollowsTheServingSlot(t *testing.T) {
 		t.Fatalf("before dispatch = %q, want %q", got, registry.KVBackendUnknown)
 	}
 
-	d.pr = &registry.PendingRequest{RequestID: "req-latch", ProviderID: primary.ID, Model: model}
+	// d.provider always accompanies d.pr in production (they are assigned
+	// together at every dispatch/promotion site), and the serving-slot latch now
+	// resolves the backend from the held provider rather than the registry.
+	d.provider, d.pr = primary, &registry.PendingRequest{RequestID: "req-latch", ProviderID: primary.ID, Model: model}
 	d.noteServingSlot()
-	d.pr = nil
+	d.provider, d.pr = nil, nil
 	if got := d.kvBackendAttribution().Backend; got != registry.KVBackendPaged {
 		t.Errorf("after failover cleared d.pr = %q, want %q (the latch is what keeps a crashed "+
 			"paged slot's 5xx attributable)", got, registry.KVBackendPaged)
 	}
 
-	// Speculative backup takes over: the live pending request wins.
-	d.pr = &registry.PendingRequest{RequestID: "req-latch-backup", ProviderID: backup.ID, Model: model}
+	// Speculative backup takes over: the live pending request (and its provider) wins.
+	d.provider, d.pr = backup, &registry.PendingRequest{RequestID: "req-latch-backup", ProviderID: backup.ID, Model: model}
 	if got := d.kvBackendAttribution().Backend; got != registry.KVBackendContiguous {
 		t.Errorf("after a backup win = %q, want %q", got, registry.KVBackendContiguous)
 	}
