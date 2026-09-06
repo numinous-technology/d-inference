@@ -1,6 +1,6 @@
 # Storage
 
-> Last updated: 2026-09-05 · commit `4d9811f7c`
+> Last updated: 2026-09-05 · commit `bbf6f83d4`
 
 What the coordinator persists, through which interface, in which backend, and
 how the schema reaches a fresh database; then what a provider keeps on its own
@@ -191,6 +191,17 @@ KV blocks under a per-model key, not tokens.
 7. **Provider secrets never leave the Keychain in the clear.** The KV KEK is
    wrapped by a Secure Enclave key and the SSD cache is unreadable without it
    (`provider-swift/Sources/ProviderCore/KVCache/WrappedKEKStorage.swift`).
+8. **Reconnect standing is keyed to the attested Secure Enclave key, not the
+   session.** A reconnecting provider gets a fresh row (new `providers.id`); its
+   prior reputation and account linkage are recovered by a live lookup on the
+   verified SE public key, excluding the registering session's own row.
+   `GetProviderBySEKey` returns the newest device-metadata row (by `last_seen`
+   desc, `id` desc tie-break) and `GetReputationBySEKey` returns the standing
+   from the newest row that carries a `provider_reputation` row, so a bare new
+   session neither discards fresh metadata nor loses earned reputation
+   (`coordinator/store/interface_domains.go`,
+   `coordinator/registry/persistence.go` `RestoreProviderState`). Hardware trust
+   is never restored — it is re-earned live on every connection.
 
 ## Failure modes
 
@@ -214,6 +225,7 @@ KV blocks under a per-model key, not tokens.
 | Postgres pool, schema, one-shot migrations | `coordinator/store/postgres.go`, `coordinator/store/postgres_usage_totals_migration.go`, `coordinator/store/postgres_withdrawable_migration.go`, `coordinator/store/postgres_log_report_privacy.go` |
 | Domain files | `coordinator/store/postgres_model_registry.go`, `coordinator/store/postgres_base_rewards.go`, `coordinator/store/postgres_profiles.go`, `coordinator/store/route_telemetry.go`, `coordinator/store/usage_time_series.go`, `coordinator/store/apikey.go` |
 | Memory backend | `coordinator/store/memory.go`, `coordinator/store/memory_base_rewards.go` |
+| Reconnect state restore (SE-key lookup) | `GetProviderBySEKey`/`GetReputationBySEKey` in `coordinator/store/memory.go`, `coordinator/store/postgres.go`; `coordinator/registry/persistence.go` (`RestoreProviderState`) |
 | Manual SQL | `coordinator/store/migrations/` |
 | Persistent-disk state outside Postgres (MicroMDM, journals) | `coordinator/deploy/start.sh`, `coordinator/api/trust_reuse_journal.go`, [`../operations/state-export.md`](../operations/state-export.md) |
 | Provider files and Keychain | `provider-swift/Sources/ProviderCore/Config/ProviderConfig.swift`, `provider-swift/Sources/ProviderCore/Service/`, `provider-swift/Sources/ProviderCore/KVCacheSSD/`, `provider-swift/Sources/ProviderCore/KVCache/WrappedKEKStorage.swift` |

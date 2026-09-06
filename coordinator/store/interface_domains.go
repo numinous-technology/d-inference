@@ -651,6 +651,28 @@ type ProviderStore interface {
 	// GetProviderBySerial returns a provider record by serial number.
 	GetProviderBySerial(ctx context.Context, serial string) (*ProviderRecord, error)
 
+	// GetProviderBySEKey returns the most-recently-seen provider record whose
+	// Secure Enclave public key matches sePublicKey, excluding the record whose id
+	// equals excludeID (the currently registering session). "Most recent" is
+	// ordered by LastSeen descending, ties broken deterministically by id
+	// descending so Memory and Postgres agree. Identity is the attested Secure
+	// Enclave key ALONE — never the serial number (shareable across a re-image /
+	// key rotation) nor the per-connection session id. This selects the freshest
+	// DEVICE METADATA (account linkage, failed challenges, lifetime/session
+	// counters, cached MDA chain); reputation is looked up separately via
+	// GetReputationBySEKey so a newer session that has not yet flushed a reputation
+	// row does not discard fresh device state. Returns (nil, nil) if none match.
+	GetProviderBySEKey(ctx context.Context, sePublicKey, excludeID string) (*ProviderRecord, error)
+
+	// GetReputationBySEKey returns the reputation of the most-recently-seen
+	// provider record that both matches sePublicKey and carries a persisted
+	// reputation row, excluding excludeID. Ordering and identity rules match
+	// GetProviderBySEKey (LastSeen desc, id desc tie-break; SE key only). This lets
+	// a reconnect recover standing earned by an earlier session under the same
+	// attested key even when the newest record has no reputation row yet. Returns
+	// (nil, nil) if none match.
+	GetReputationBySEKey(ctx context.Context, sePublicKey, excludeID string) (*ReputationRecord, error)
+
 	// GetMDAChainBySerial returns the newest NON-EMPTY Apple MDA cert chain stored
 	// for a serial, or (nil, nil) if none. A reconnecting provider gets a new row
 	// (keyed by a fresh provider id) that may be persisted with an empty chain
