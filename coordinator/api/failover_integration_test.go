@@ -108,6 +108,7 @@ type failoverProvider struct {
 	dispatches atomic.Int32
 	bodies     chan []byte
 	done       chan struct{}
+	cancel     context.CancelFunc
 	closeOnce  sync.Once
 }
 
@@ -205,6 +206,7 @@ func startFailoverProvider(t *testing.T, ctx context.Context, ts *httptest.Serve
 	reg.SetTrustLevel(registryID, registry.TrustHardware)
 	reg.RecordChallengeSuccess(registryID)
 
+	runCtx, runCancel := context.WithCancel(ctx)
 	fp := &failoverProvider{
 		t:          t,
 		name:       cfg.Name,
@@ -215,8 +217,9 @@ func startFailoverProvider(t *testing.T, ctx context.Context, ts *httptest.Serve
 		script:     cfg.Script,
 		bodies:     make(chan []byte, 8),
 		done:       make(chan struct{}),
+		cancel:     runCancel,
 	}
-	go fp.run(ctx)
+	go fp.run(runCtx)
 	t.Cleanup(fp.close)
 	return fp
 }
@@ -285,9 +288,17 @@ func (fp *failoverProvider) dispatchCount() int {
 
 // close shuts the provider WebSocket down (idempotent; safe in t.Cleanup).
 func (fp *failoverProvider) close() {
+	fp.cancel()
 	fp.closeOnce.Do(func() {
 		_ = fp.conn.Close(websocket.StatusNormalClosure, "test done")
 	})
+	// A script can still log through testing.T after the socket closes.
+	// Join it before test cleanup returns, including after an earlier closeNow.
+	select {
+	case <-fp.done:
+	case <-time.After(5 * time.Second):
+		fp.t.Errorf("provider %s: read loop did not exit during cleanup", fp.name)
+	}
 }
 
 // closeNow abruptly drops the provider connection, simulating a crash /
@@ -975,5 +986,60 @@ func TestProviderClientError400_StopsAfterOne(t *testing.T) {
 	}
 	if !strings.Contains(body, "invalid_request_error") {
 		t.Errorf("body should surface invalid_request_error; got %s", body)
+	}
+}
+
+func TestFailoverProviderCleanupJoinsActiveScript(t *testing.T) {
+	reg, _, ts := setupFailoverServer(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	var releaseOnce sync.Once
+	releaseScript := func() { releaseOnce.Do(func() { close(release) }) }
+	defer releaseScript()
+	const model = "cleanup-model"
+	fp := startFailoverProvider(t, ctx, ts, reg, failoverProviderConfig{
+		Name: "cleanup-provider", Version: "0.6.4", DecodeTPS: 100,
+		Models: []failoverModelSpec{{ID: model}},
+		Script: func(context.Context, *failoverProvider, protocol.InferenceRequestMessage, []byte) {
+			close(entered)
+			<-release
+		},
+	})
+	clientDone := make(chan struct{})
+	body := buildChatBody(t, model, true, nil)
+	go func() {
+		defer close(clientDone)
+		_, _, _ = postChat(ctx, ts.URL, "test-key", body)
+	}()
+	select {
+	case <-entered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("provider did not enter its script")
+	}
+	closed := make(chan struct{})
+	go func() { fp.close(); close(closed) }()
+	select {
+	case <-closed:
+		t.Fatal("provider cleanup returned while its script could still access testing.T")
+	case <-time.After(100 * time.Millisecond):
+	}
+	releaseScript()
+	select {
+	case <-closed:
+	case <-time.After(5 * time.Second):
+		t.Fatal("provider cleanup did not finish after its script exited")
+	}
+	select {
+	case <-fp.done:
+	default:
+		t.Fatal("provider cleanup returned before the read loop exited")
+	}
+	cancel()
+	select {
+	case <-clientDone:
+	case <-time.After(5 * time.Second):
+		t.Fatal("consumer request did not exit after cancellation")
 	}
 }
